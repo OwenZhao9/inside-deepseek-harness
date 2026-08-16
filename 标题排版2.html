@@ -1,0 +1,266 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>标题与术语 · 另外六种结构</title>
+<style>
+:root{
+  --bg:#FCFCFB; --surf:#FFF; --ink:#101113; --body:#3A3D40; --grey:#75787C; --faint:#A6A9AC;
+  --rule:#E5E5E2; --hair:#EFEFEC;
+  --hot:#DD4B32; --hot-deep:#B93A24; --hot-wash:#FDF0ED; --hot-line:#F5CFC6;
+  --sans:"PingFang SC","Hiragino Sans GB","Noto Sans CJK SC",-apple-system,sans-serif;
+  --en:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+@media (prefers-color-scheme:dark){
+  :root{ --bg:#0D0E10; --surf:#141618; --ink:#F2F2F0; --body:#C4C7CB; --grey:#8A8E93; --faint:#5F6367;
+         --rule:#25282C; --hair:#1C1F22; --hot:#FF7A5C; --hot-deep:#FF9578; --hot-wash:#22150F; --hot-line:#40241B; }
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--body);font-family:var(--sans);-webkit-font-smoothing:antialiased}
+.page{max-width:47rem;margin:0 auto;padding:56px 30px 130px}
+.hd h1{font-size:26px;font-weight:600;color:var(--ink);letter-spacing:-.02em;margin-bottom:12px}
+.hd p{font-size:15px;line-height:1.85;color:var(--grey);max-width:34em}
+
+.opt{border-top:1px solid var(--rule);margin-top:56px;padding-top:22px}
+.opt > .tag{font-size:11px;letter-spacing:.24em;color:var(--hot-deep);font-weight:600;
+  display:flex;align-items:center;gap:9px;margin-bottom:7px}
+.opt > .tag::before{content:"";width:18px;height:2px;background:var(--hot);border-radius:2px}
+.opt > .why{font-size:13.5px;line-height:1.8;color:var(--grey);margin-bottom:28px;max-width:33em}
+
+.demo{background:var(--surf);border:1px solid var(--hair);border-radius:14px;
+  padding:0;margin-bottom:13px;position:relative;overflow:hidden}
+.demo .pad{padding:38px 36px}
+.demo::after{content:attr(data-ed);position:absolute;top:13px;right:15px;z-index:3;
+  font-size:10px;letter-spacing:.2em;color:var(--faint);font-weight:600}
+.demo.en{font-family:var(--en)}
+.demo.en .body{line-height:1.72}
+@media (max-width:600px){ .demo .pad{padding:28px 20px} }
+
+.lead{font-size:clamp(25px,5vw,34px);font-weight:600;color:var(--ink);line-height:1.32;letter-spacing:-.02em}
+.body{margin-top:26px;font-size:15.5px;line-height:1.9;color:var(--body)}
+
+/* ═════ G 书眉：术语搬到页顶通栏，跟标题块分家 ═════ */
+.G .runner{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:13px 36px;border-bottom:1px solid var(--hair);background:var(--hot-wash);
+}
+.G .runner .t{font-size:14px;font-weight:700;color:var(--hot-deep);letter-spacing:.06em}
+.G .runner .no{font-size:10.5px;letter-spacing:.24em;color:var(--hot-deep);opacity:.65;font-weight:600}
+.G .pad{padding-top:34px}
+.G .n{font-size:44px;font-weight:200;color:var(--hot);letter-spacing:-.04em;line-height:.9;
+  display:block;margin-bottom:14px}
+
+/* ═════ H 数字与术语合成一个色块 ═════ */
+.H .top{display:flex;align-items:stretch;gap:20px;margin-bottom:20px}
+.H .chip{
+  background:var(--hot);color:#FFF;border-radius:11px;padding:13px 17px 14px;
+  display:flex;flex-direction:column;justify-content:center;flex:none;min-width:104px;
+}
+.H .chip .n{font-size:34px;font-weight:300;line-height:.95;letter-spacing:-.03em}
+.H .chip .t{font-size:14px;font-weight:600;margin-top:5px;letter-spacing:.02em;line-height:1.25}
+.H .top .lead{align-self:center}
+@media (prefers-color-scheme:dark){ .H .chip{color:#160F0B} }
+@media (max-width:560px){ .H .top{flex-direction:column;gap:16px} .H .chip{align-self:flex-start} }
+
+/* ═════ I 竖排侧栏：贯穿整篇的左侧色条 ═════ */
+.I .demo{padding-left:0}
+.I .split{display:flex;align-items:stretch}
+.I .rail{
+  background:var(--hot);color:#FFF;flex:none;width:52px;
+  display:flex;align-items:center;justify-content:center;
+}
+.I .rail span{
+  writing-mode:vertical-rl;text-orientation:mixed;
+  font-size:16px;font-weight:700;letter-spacing:.22em;white-space:nowrap;
+}
+.I .rail .no{position:absolute;top:14px;left:14px;font-size:11px;letter-spacing:.14em;opacity:.7;writing-mode:horizontal-tb}
+@media (prefers-color-scheme:dark){ .I .rail{color:#160F0B} }
+@media (max-width:560px){
+  .I .split{flex-direction:column}
+  .I .rail{width:100%;padding:9px 0}
+  .I .rail span{writing-mode:horizontal-tb;letter-spacing:.24em}
+}
+
+/* ═════ J 超大浅色水印，标题压在上面 ═════ */
+.J .stage{position:relative;padding-top:26px}
+.J .ghost{
+  position:absolute;top:0;left:-4px;right:0;z-index:0;pointer-events:none;
+  font-size:clamp(56px,13vw,96px);font-weight:800;line-height:.9;
+  color:var(--hot-wash);letter-spacing:-.045em;white-space:nowrap;overflow:hidden;
+}
+.J .lead{position:relative;z-index:1}
+.J .no{position:relative;z-index:1;font-size:10.5px;letter-spacing:.26em;
+  color:var(--faint);font-weight:600;margin-bottom:12px}
+@media (prefers-color-scheme:dark){ .J .ghost{color:#1D1410} }
+
+/* ═════ K 左右对开，中间一道竖线 ═════ */
+.K .split{display:flex;gap:26px;align-items:flex-start}
+.K .l{flex:1 1 60%}
+.K .r{flex:0 0 34%;border-left:2px solid var(--ink);padding-left:20px;padding-top:5px}
+.K .r .k{display:block;font-size:10px;letter-spacing:.22em;color:var(--faint);font-weight:600;margin-bottom:7px}
+.K .r .t{font-size:clamp(20px,3.6vw,25px);font-weight:700;color:var(--hot);line-height:1.22;letter-spacing:-.01em}
+.K .no{font-size:10.5px;letter-spacing:.26em;color:var(--faint);font-weight:600;margin-bottom:12px}
+@media (max-width:620px){
+  .K .split{flex-direction:column;gap:18px}
+  .K .r{border-left:0;border-top:2px solid var(--ink);padding:12px 0 0;width:100%}
+}
+
+/* ═════ L 术语根本不进标题区，改在正文里点破 ═════ */
+.L .no{font-size:10.5px;letter-spacing:.26em;color:var(--faint);font-weight:600;margin-bottom:12px}
+.L .lead{margin-bottom:24px}
+.L .body{margin-top:0}
+.L .strike{
+  margin:22px 0 0;padding:16px 19px;background:var(--hot-wash);
+  border:1px solid var(--hot-line);border-radius:11px;
+}
+.L .strike .k{font-size:10px;letter-spacing:.22em;color:var(--hot-deep);font-weight:700;
+  display:block;margin-bottom:8px;opacity:.8}
+.L .strike .t{font-size:23px;font-weight:700;color:var(--hot-deep);letter-spacing:-.01em;line-height:1.25}
+.L .strike .d{font-size:13.5px;line-height:1.78;color:var(--body);margin-top:7px}
+</style></head><body>
+
+<div class="page">
+
+  <div class="hd">
+    <h1>另外六种结构</h1>
+    <p>跟 A–F 不是同一类改法。前六种都是在「标题下面那一行」里调字号和位置，这六种是把术语搬到别的地方去——搬进页眉、搬进篇号、搬到侧边、搬到背景、搬到右栏，或者干脆搬出标题区。每种照旧中英各一张。</p>
+  </div>
+
+  <!-- G -->
+  <section class="opt G">
+    <div class="tag">G　书眉通栏</div>
+    <p class="why">术语搬到页面最顶上，做成一条通栏的浅色带，跟标题块彻底分家。它不再是「标题的附属」，而是这一篇的门牌。往后每一页顶上都能重复出现，读者翻到哪儿都知道自己在读哪个概念。</p>
+    <div class="demo" data-ed="中文版">
+      <div class="runner"><span class="t">马具</span><span class="no">第三篇</span></div>
+      <div class="pad"><span class="n">03</span>
+        <p class="lead">马有的是力气，可它拉不动车</p>
+        <div class="body"><p>马有的是力气。可一匹什么都没套的马拉不动车⋯⋯</p></div></div>
+    </div>
+    <div class="demo en" data-ed="ENGLISH">
+      <div class="runner"><span class="t">Harness</span><span class="no">CHAPTER 3</span></div>
+      <div class="pad"><span class="n">03</span>
+        <p class="lead">A horse has all the strength in the world, and still cannot pull a cart</p>
+        <div class="body"><p>A horse has plenty of strength. But a horse with nothing strapped to it cannot pull a cart⋯</p></div></div>
+    </div>
+  </section>
+
+  <!-- H -->
+  <section class="opt H">
+    <div class="tag">H　篇号与术语合成一块</div>
+    <p class="why">篇号不再单独站着，跟术语焊成一个砖红色块，摆在标题左边。这一块就是这篇的标识，像书脊上的编号。标题在右边，长短随便。</p>
+    <div class="demo" data-ed="中文版">
+      <div class="pad">
+        <div class="top">
+          <div class="chip"><span class="n">03</span><span class="t">马具</span></div>
+          <p class="lead">马有的是力气，可它拉不动车</p>
+        </div>
+        <div class="body"><p>马有的是力气。可一匹什么都没套的马拉不动车⋯⋯</p></div>
+      </div>
+    </div>
+    <div class="demo en" data-ed="ENGLISH">
+      <div class="pad">
+        <div class="top">
+          <div class="chip"><span class="n">03</span><span class="t">Harness</span></div>
+          <p class="lead">A horse has all the strength in the world, and still cannot pull a cart</p>
+        </div>
+        <div class="body"><p>A horse has plenty of strength. But a horse with nothing strapped to it cannot pull a cart⋯</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- I -->
+  <section class="opt I">
+    <div class="tag">I　竖排侧栏</div>
+    <p class="why">整篇左边一条砖红竖条，术语竖着写在里面，从头贯到尾。中文天生适合竖排，而且一条通天的色带在满页横排里份量极重，字号完全不用做大。英文会转 90 度立起来，读着要偏一下头。</p>
+    <div class="demo" data-ed="中文版">
+      <div class="split">
+        <div class="rail"><span>马具</span></div>
+        <div class="pad">
+          <p class="lead">马有的是力气，可它拉不动车</p>
+          <div class="body"><p>马有的是力气。可一匹什么都没套的马拉不动车——它不知道该往哪边走，使出来的力气也没地方传出去⋯⋯</p></div>
+        </div>
+      </div>
+    </div>
+    <div class="demo en" data-ed="ENGLISH">
+      <div class="split">
+        <div class="rail"><span>HARNESS</span></div>
+        <div class="pad">
+          <p class="lead">A horse has all the strength in the world, and still cannot pull a cart</p>
+          <div class="body"><p>A horse has plenty of strength. But a horse with nothing strapped to it cannot pull a cart. It has no idea which way to go⋯</p></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- J -->
+  <section class="opt J">
+    <div class="tag">J　背景水印</div>
+    <p class="why">术语用极大字号、极淡颜色垫在标题后面当背景，标题压在上面。术语大到不可能被忽略，但因为颜色淡，不跟标题抢注意力。海报的做法。缺点是术语一长就会被裁掉。</p>
+    <div class="demo" data-ed="中文版">
+      <div class="pad"><div class="stage">
+        <div class="ghost">马具</div>
+        <p class="no">第三篇</p>
+        <p class="lead">马有的是力气，可它拉不动车</p>
+      </div>
+        <div class="body"><p>马有的是力气。可一匹什么都没套的马拉不动车⋯⋯</p></div></div>
+    </div>
+    <div class="demo en" data-ed="ENGLISH">
+      <div class="pad"><div class="stage">
+        <div class="ghost">HARNESS</div>
+        <p class="no">CHAPTER 3</p>
+        <p class="lead">A horse has all the strength in the world, and still cannot pull a cart</p>
+      </div>
+        <div class="body"><p>A horse has plenty of strength. But a horse with nothing strapped to it cannot pull a cart⋯</p></div></div>
+    </div>
+  </section>
+
+  <!-- K -->
+  <section class="opt K">
+    <div class="tag">K　左右对开</div>
+    <p class="why">标题占左边六成，术语单独占右栏，中间一道粗黑竖线切开。两件东西并排站着，谁也不在谁下面——最能表达「这句白话就等于这个词」。窄屏自动上下叠。</p>
+    <div class="demo" data-ed="中文版">
+      <div class="pad">
+        <p class="no">第三篇 · 03</p>
+        <div class="split">
+          <div class="l"><p class="lead">马有的是力气，可它拉不动车</p></div>
+          <div class="r"><span class="k">要记住的词</span><span class="t">马具</span></div>
+        </div>
+        <div class="body"><p>马有的是力气。可一匹什么都没套的马拉不动车⋯⋯</p></div>
+      </div>
+    </div>
+    <div class="demo en" data-ed="ENGLISH">
+      <div class="pad">
+        <p class="no">CHAPTER 3 · 03</p>
+        <div class="split">
+          <div class="l"><p class="lead">A horse has all the strength in the world, and still cannot pull a cart</p></div>
+          <div class="r"><span class="k">TERM</span><span class="t">Harness</span></div>
+        </div>
+        <div class="body"><p>A horse has plenty of strength. But a horse with nothing strapped to it cannot pull a cart⋯</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- L -->
+  <section class="opt L">
+    <div class="tag">L　搬出标题区</div>
+    <p class="why">标题区只剩篇号和白话，一个术语都不放。那个词等到正文里第一次真正需要它的地方，用一个色块单独点破。最忠实于「深入浅出」——先让人明白，再给名字。代价是目录和标题区看不出这篇在讲什么概念。</p>
+    <div class="demo" data-ed="中文版">
+      <div class="pad">
+        <p class="no">第三篇 · 03</p>
+        <p class="lead">马有的是力气，可它拉不动车</p>
+        <div class="body"><p>马有的是力气。可一匹什么都没套的马拉不动车——它不知道该往哪边走，使出来的力气也没地方传出去。缺的是套在它身上、把它和车连起来的那一整套东西。</p></div>
+        <div class="strike"><span class="k">这个东西叫</span><span class="t">马具</span>
+          <p class="d">套在模型外面的那一层：把它想做的事翻译成真实动作，做完把结果送回去。</p></div>
+      </div>
+    </div>
+    <div class="demo en" data-ed="ENGLISH">
+      <div class="pad">
+        <p class="no">CHAPTER 3 · 03</p>
+        <p class="lead">A horse has all the strength in the world, and still cannot pull a cart</p>
+        <div class="body"><p>A horse has plenty of strength. But a horse with nothing strapped to it cannot pull a cart. It has no idea which way to go, and the strength it does have has nowhere to go either.</p></div>
+        <div class="strike"><span class="k">THIS THING IS CALLED A</span><span class="t">Harness</span>
+          <p class="d">The layer wrapped around the model: it turns what the model wants into real actions, then feeds the results back.</p></div>
+      </div>
+    </div>
+  </section>
+
+</div>
+</body></html>

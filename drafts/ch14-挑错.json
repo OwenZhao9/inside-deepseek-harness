@@ -1,0 +1,207 @@
+{
+  "no": "14",
+  "title": "它手上有 51 件工具",
+  "verdict": "需修",
+  "factErrors": [
+    {
+      "claim": "「什么时候准用这件工具，写死在预设的提示词里……（apps/cli/config/agent-presets/standard/agent.cordis.yml 第 120 行）」",
+      "problem": "作用域搞错了。第 120 行不是预设的通用提示词，它落在 `@deepseek-ai/dsh-plan-mode` 插件的 `section:` 配置块里——该块从第 113 行 `section: |` 开始，正文是 114–124 行，开头第 114 行就是「You are in plan mode.」，第 118 行还自称「These plan-mode rules override any later tool description or guidance」。这段话只在 agent 处于 plan mode 时才拼进提示词。",
+      "truth": "同一句在 code:127、cordis:108 也出现，全部在各自的 plan-mode section 内。全仓 grep `ask_user_question`，四套预设里再无第二处规定用法的文字——也就是说，非 plan mode 的普通会话里，模型读不到这条限制。稿子必须改成「计划模式下的提示词里写着……」。"
+    },
+    {
+      "claim": "「两种都会说明自己截了，并报告完整的排序列表存到了哪里（glob.ts 第 235–239 行）」",
+      "problem": "行号错了，正是规矩点名的那类错。第 235 行是讲「结果装得下就原样返回」的注释，第 236 行是装得下的分支；两条截断分支在 237–240 行，而采样分支的 return 在第 240 行——被排除在作者给的范围之外。",
+      "truth": "237–240 行。237 `if (!caps.sampleOverCapGlobResults) {`、238 `return formatGlobPage(paths.slice(0, caps.maxResults), ...)`、239 `}`、240 `return formatGlobOutput(sampleAcrossTopLevel(...))`。"
+    },
+    {
+      "claim": "「@deepseek-ai/dsh-tool-bash 那一件，说明书第一句就写明：每次调用开一个全新的 shell」",
+      "problem": "不是第一句。目录第 182 行的第一句是「Execute a bash command (`bash -c`) and return its stdout/stderr.」，「Each call runs in a fresh shell」是第二句。",
+      "truth": "改成「说明书第二句就写明」，或者干脆去掉「第一句」。"
+    },
+    {
+      "claim": "「@deepseek-ai/dsh-tool-bash-persistent 那一件，说明书只有一句话：状态在多次调用之间保留，包括当前目录和导出的环境变量」",
+      "problem": "两处不准。一、目录第 508 行是两句话，不是一句：「Run commands in a persistent bash shell. State, including the current directory and exported environment variables, persists across calls for this agent.」二、译文漏掉了句尾的 `for this agent`——状态是按 agent 隔离的，不是全局保留。",
+      "truth": "源码 index.ts:25 的 DEFAULT_DESCRIPTION 逐字如此；目录第 527 行的包注释也写「One owner-isolated persistent bash tool」。漏掉 owner 隔离这一层，读者会以为两个并行 agent 共用同一个 shell 状态。"
+    },
+    {
+      "claim": "「一次工具调用里可以套着几十次工具调用」",
+      "problem": "「几十次」凭感觉写的，仓库里没有这个数。",
+      "truth": "能查到的唯一相关数字是 packages/core/tools/src/index.ts:776 的 `maxParallelSubCalls` 默认 10，而且它是并发上限（同时最多重叠 10 个并发安全调用），不是一次运行的总次数上限。README.zh.md:123 明确说「默认 10；设为 1 即恢复串行分发」。总次数没有任何文档给出上限。要么删掉这个数，要么改写成「并发安全的子调用最多同时重叠 10 个（默认值）」。"
+    },
+    {
+      "claim": "「read_image 会出现在模型的工具清单里，会被模型看见，会被模型调用，然后在第三道关上被挡回来」",
+      "problem": "前两个「会」有代码支撑，第三个「会被模型调用」是对模型行为的预测，不是仓库里的事实。这是把两件都存在的事实（附件服务挂着 + DeepSeek 只声明 text）硬推到第三件事上。",
+      "truth": "代码只能证明：工具会注册、会进清单、一旦被调用就在 read-image.ts:73-75 抛错。改成「一旦被调用，就在第三道关上被挡回来」。"
+    },
+    {
+      "claim": "「一套预设就是一个配置文件」",
+      "problem": "不对。每套预设是一个目录，至少两个文件。",
+      "truth": "apps/cli/config/agent-presets/{code,cordis,minimal,standard}/ 每个目录下都有 agent.cordis.yml 和 preset.yml；cordis 还多一个 skills/ 目录，里面两个 SKILL.md（cordis-plugin-development、editing-cordis-compositions）。"
+    },
+    {
+      "claim": "「另外三套（standard、code、cordis）挂的都是每次开新 shell 的那一件」",
+      "problem": "漏了平台条件，而这一节整节就是在讲哪套预设配哪件 bash。",
+      "truth": "三套里的 tool-bash 都带 `disabled: !!js process.platform === 'win32'`（standard:46、code:53、cordis:47），紧跟着的 tool-pwsh 带反向条件。在 Windows 上这三套预设根本没有 `bash` 这件工具，模型看到的是 `pwsh`。"
+    },
+    {
+      "claim": "「边界在包自己的中文说明里列得很直白：这些包只活在进程内存里……每个包只在定义它的那一个会话里可见和可控」",
+      "problem": "选择性引用，把原文里唯一一句反向的话删了，结论方向被引反。",
+      "truth": "packages/extensions/tool-cordis/README.zh.md:19 原文：「动态包只存在于共享 DSH 进程内存中。它可跨后续轮次保持活跃，**也可能影响同一进程中的其他会话**，但会在 cordis_stop／cordis_undefine、工具集卸载或 DSH 重启后消失。」英文版同句：「They remain active across later turns and may affect other sessions in that process」。稿子把「只在本会话可见可控」拿出来当边界，却删掉了同一段里「可能影响同进程其他会话」——而这一节的主题恰恰是这组工具的危险性。"
+    },
+    {
+      "claim": "整段引用 packages/extensions/tool-cordis/README.zh.md 作为边界与信任声明的权威来源",
+      "problem": "这份 README 在一个可当场核对的点上已经过期，稿子自己的正文就跟它打架。",
+      "truth": "README.zh.md:5（英文版 README.md:5 同）写「五个面向模型的工具」，并把只读报告称作 `cordis_inspect`。而源码 index.ts 注册的是七个：42/61/97/149/241/330/352，只读那一件拆成了 cordis_inspect_list / _query / _self。稿子上一段刚数出 7 个（数对了），下一段就拿这份说「五个」的文档当边界依据。至少要在稿子里避开这份文档已明确过期的部分，或改引 docs/tool-catalog.md 第 500 行。"
+    },
+    {
+      "claim": "「也就是说，一次工具调用的结果，可以是模型手上多出一件原来没有的工具」",
+      "problem": "漏掉中间的人工环节，读起来像全自动。",
+      "truth": "README.md:12 / README.zh.md:12：cordis_define 之后「用户会在会话里看到它的卡片和一个启动控件」（英文：the user sees a card for it in the conversation with a start control）；目录第 425 行 cordis_run 的说明还写着「An unauthorized Client Package creates an approval request and returns awaiting-approval」。"
+    },
+    {
+      "claim": "「两种都会说明自己截了，并报告完整的排序列表存到了哪里」",
+      "problem": "「都会报告存到哪里」是无条件断言，代码里有条件。",
+      "truth": "glob.ts:225-227，只有 spillRef 存在时才输出「Full sorted result stored at: <locator>」；spillRef 为 undefined 时输出的是「The complete result could not be saved; narrow pattern or path to see more.」"
+    },
+    {
+      "claim": "数据卡「几件常用工具的上限」，导语「还有一批数字，规定它一次最多吐多少东西回来」",
+      "problem": "八行里有两行根本不是输出上限，跟卡片标题和导语不是一回事。",
+      "truth": "terminal_read 的 500 是**默认值**不是上限——目录第 861 行原文「Requested line count (default 500; backend caps apply)」，真正的上限在后端；schedule_create 的 300 秒是**最短间隔**（目录第 1057 行「at least 300」），跟「一次吐多少」无关。这两行要么拆出去，要么改卡片标题。"
+    },
+    {
+      "claim": "「glob 的 100 和 grep 的 250 是 glob.ts 第 26 行和 grep.ts 第 30 行的常量」，以及卡片把 2000 行 / 2000 字符 / 50 KB / 10 MB 当固定上限",
+      "problem": "这些全是可由部署改写的配置默认值，稿子把它们说成常量／上限，跟本篇自己的主题（配置决定模型看到什么）自相矛盾。",
+      "truth": "tool-fs/src/index.ts:37-40 全是 `z.number().default(READ_LIMIT)` 之类；glob.ts:26 的 JSDoc 原文「Default cap on paths retained inline by one glob call (the `globMaxResults` config)」，grep.ts:30 同样写「(the `grepMaxMatches` config)」。另外 sampleOverCapGlobResults 在 index.ts:98 是 `z.boolean().required()`——没有默认值，目录第 774 行明说「deployments must choose that behavior explicitly」；稿子写成「配置文件里的一个开关。开关打开／开关关掉」，暗示有个默认状态。"
+    },
+    {
+      "claim": "小标题「每件工具都带着一条上限」",
+      "problem": "51 件里数据卡只覆盖 5 件（read、glob、grep、terminal_read、schedule_create），「每件」没数过。",
+      "truth": "改成「工具说明书里还印着一批数字」之类，或真去数有多少件带上限。"
+    },
+    {
+      "claim": "<pre> 里那四行 bash description",
+      "problem": "四行在原文里不连续，稿子排成连续块，中间没有省略记号。",
+      "truth": "minimal/agent.cordis.yml 第 37、39、40、41 行，跳过了第 38 行「* When invoking this tool, the contents of the \"command\" parameter does NOT need to be XML-escaped.」。加省略号，或把第 38 行补回去。"
+    },
+    {
+      "claim": "「成为模型读到的唯一一份 bash 使用手册」",
+      "problem": "「唯一」过头了。",
+      "truth": "模型还会读到参数 schema 里的描述（tool-bash-persistent/src/index.ts:381「The bash command to run. Relative path is preferred in the command.」），那一句不受 config.description 覆盖。"
+    },
+    {
+      "claim": "「再问它「你打算怎么向模型自我介绍」，把答案原样抄下来」",
+      "problem": "用了「」把一句仓库里不存在的话包起来，视觉上等于引文。规矩四点名过「凭空造出一个官方公式」。",
+      "truth": "目录第 8 行原文是「BOOTS each tool plugin on a real context and reads `ctx.tools.schemas()`」。要么去掉引号改成白话转述，要么直接引 schemas() 这个动作。"
+    },
+    {
+      "claim": "「把 shell 每次等待输入时打印的那个提示记号改成 __DSH_PERSISTENT_BASH_PROMPT__，一个别的东西不可能撞上的字符串」",
+      "problem": "「不可能撞上」没有出处，而且跟源码的设计正相反。",
+      "truth": "SHELL_PROMPT（index.ts:18）是写死的固定常量；真正做防撞设计的是每条命令的标记，62–68 行用 randomUUID 现生成 nonce。源码没有任何地方声称这个固定提示符防撞。"
+    },
+    {
+      "claim": "「脚本会去扫仓库里所有叫 tool-* 的包」",
+      "problem": "范围说宽了，而且这道守卫其实盖不住目录里的一部分包。",
+      "truth": "目录第 8 行原文是 globs `packages/*/tool-*`，只扫 packages/ 下面。目录里 24 个包中，`@deepseek-ai/dsh-tools`（第 119 行）、`@deepseek-ai/dsh-plan-mode`（151）、`@deepseek-ai/dsh-schedule`（1037）都不叫 tool-*，这道完整性检查管不到它们。"
+    }
+  ],
+  "ruleViolations": [
+    {
+      "rule": "第 4 条 不用拟人化俏皮动词",
+      "quote": "一个持续开着的终端只会源源不断吐字符出来 / 规定它一次最多吐多少东西回来 / 它在终端吐出的一大堆字符里找那两个标记",
+      "fix": "「吐」在稿子里出现三次，是典型的俏皮拟人动词。改成「不断打出字符」「一次最多返回多少」「终端打出来的一大堆字符里」。"
+    },
+    {
+      "rule": "第 4 条 不用拟人化俏皮动词",
+      "quote": "攒了半天的当前目录和环境变量，在这一刻整个丢掉。",
+      "fix": "「攒了半天」是口语化拟人。这一句同时也是段末金句（见下条），建议整句删掉——上一句「把整个 shell 杀掉重开」已经说完了。"
+    },
+    {
+      "rule": "第 4 条 不用拟人化俏皮动词",
+      "quote": "再问它「你打算怎么向模型自我介绍」",
+      "fix": "把插件写成会回答问题的人。改成「读它注册出来的工具 schema」。"
+    },
+    {
+      "rule": "第 7 条 不用「不是 X，是 Y」对仗句",
+      "quote": "让 shell 一直活着不难，难的是判断一条命令什么时候跑完了、跑成没跑成",
+      "fix": "「X 不难，难的是 Y」是同一族的对仗句。改成陈述：「一个持续开着的终端会不断打出字符，字符流里没有记号标出一条命令到此为止、结果如何。」"
+    },
+    {
+      "rule": "第 7 条 不用「不是 X，是 Y」对仗句",
+      "quote": "这个开关不只改行为，还改模型读到的说明书。",
+      "fix": "「不只 X，还 Y」是变体。直接写：「这个开关同时改写模型读到的那句说明。」"
+    },
+    {
+      "rule": "第 6 条 不用无信息引导词 + 事实纪律第 4 条（推论句）",
+      "quote": "这正是那份目录得靠启动插件才生成得出来的原因——glob 的说明书在源码里根本不是一个完整的字符串",
+      "fix": "「正是」是规矩六点名的那一类，而且断言过头：目录第 8 行给了四条理由（runtime-spread enums、concatenated descriptions、config-driven names、raw-JSON-Schema MCP tools），glob 只是其中一条的一个例子，不是「正是那个原因」。改成「glob 就是目录第 8 行说的『拼接出来的说明』那一类。」"
+    },
+    {
+      "rule": "第 10 条 先讲明白再贴标签，一段最多欠一个新词",
+      "quote": "那个沙箱隔离全局变量，但它不是安全边界。",
+      "fix": "「那个沙箱」在全篇没有先行词——前文从没出现过沙箱。同一句里还压了「全局变量」「安全边界」两个未解释的词。要么先用一句白话说清楚「代码跑在一个受限的执行环境里」，要么整句改写。"
+    },
+    {
+      "rule": "第 10 条 先讲明白再贴标签，一段最多欠一个新词",
+      "quote": "同时关掉输入回显",
+      "fix": "这一条 trace 里已经用白话解释了「提示记号」，「回显」是第二个新词且没解释。改成「同时让终端不再把打进去的命令原样显示出来」，或者直接删——它对读者理解这套标记机制没有作用。"
+    },
+    {
+      "rule": "第 10 条 先讲明白再贴标签，一段最多欠一个新词",
+      "quote": "部署里没挂附件存储服务，这件工具根本不会被注册",
+      "fix": "「附件存储服务」是个空壳词，读者不知道读图为什么要它。源码注释（tool-fs/src/index.ts:67-69）给了理由：没有它，部署没法把图片字节持久存下来。补一句白话。"
+    },
+    {
+      "rule": "第 10 条 先讲明白再贴标签，一段最多欠一个新词",
+      "quote": "文件大到这个尺寸就改成流式读",
+      "fix": "「流式读」在数据卡里裸出现。改成「文件大过这个尺寸就一段一段读，不整个装进内存」。"
+    },
+    {
+      "rule": "第 1 条 主语是事物，不是「你该做什么」",
+      "quote": "小标题：让它自己往自己身上装工具",
+      "fix": "「让它……」的隐含主语是「你」。改成「它可以往自己身上装工具」或「模型自己注册出来的工具」。"
+    },
+    {
+      "rule": "第 12 条 凡是「我自己挖到的」，都要额外过一道：读者要它干嘛",
+      "quote": "四条 trace：开终端时 / 每收到一条命令 / 读回来时 / 超时时（标记协议全过程）",
+      "fix": "这是全篇最长的一块，讲的是一个持久 shell 内部怎么用随机串圈定命令边界。读者从中拿到的是实现细节，不是关于「这软件能干什么」的信息。建议压成两句：持久 shell 要自己判断一条命令跑没跑完，办法是每次给命令加一对随机标记，超时就整个杀掉重开、状态清零。省下的篇幅可以给 read_image 或 cordis 那两节。"
+    },
+    {
+      "rule": "三、另外三条：段末总结金句",
+      "quote": "攒了半天的当前目录和环境变量，在这一刻整个丢掉。",
+      "fix": "删。同一条 trace 前面已经引了源码那句「下一次调用从工作目录、干净环境重新开始」，这一句只是把它换个漂亮说法再说一遍。"
+    },
+    {
+      "rule": "三、另外三条：段末总结金句",
+      "quote": "也就是说，一次工具调用的结果，可以是模型手上多出一件原来没有的工具。",
+      "fix": "删。上一句「这个包可以再往模型面前注册新的工具」已经说完了，这一句是把结论替读者下掉。"
+    },
+    {
+      "rule": "三、另外三条：段末总结金句",
+      "quote": "同一个插件换一套部署，这段文字可以完全重写，代码一行不改。",
+      "fix": "前一句「这两句是部署者敲进配置文件的字符串」已经给了同样的信息。删，或者换成一个真的新事实——比如源码里 description 是 `z.string().default(DEFAULT_DESCRIPTION)`，空字符串会在加载时报错（index.ts:441-442）。"
+    },
+    {
+      "rule": "三、另外三条：段末总结金句",
+      "quote": "两边合起来的结果：read_image 会出现在模型的工具清单里，会被模型看见，会被模型调用，然后在第三道关上被挡回来。",
+      "fix": "三个「会被」是修辞递进，其中「会被模型调用」还没有出处。压成一句：「结果是这件工具进了清单，一调用就在第三道关上被挡回来。」"
+    },
+    {
+      "rule": "三、另外三条：段末总结金句（末段）",
+      "quote": "这正是那份目录得靠启动插件才生成得出来的原因——glob 的说明书在源码里根本不是一个完整的字符串，它是两个半句加一个条件判断，得等配置填进来才拼得出来。",
+      "fix": "这是全文最后一句，回扣第二段，不给新信息。前一句「目录第 722 行印着的那句说明，和自带预设跑起来时模型实际读到的那句，不是同一句」本身就是结论，收在那里更干净。"
+    },
+    {
+      "rule": "第 14 条 讲东西，别讲这篇文章",
+      "quote": "（apps/cli/config/agent-presets/minimal/agent.cordis.yml 第 36–44 行，此处摘了其中四行）",
+      "fix": "「此处摘了其中四行」是关于这篇文章怎么排的，不是关于软件的。改成在代码块里用省略号标出跳过的行，出处只留路径和行号。"
+    }
+  ],
+  "emptyParagraphs": [
+    "「重名不是笔误。两个不同的插件包各自注册了一件叫 bash 的工具，说明书写的是两件相反的事。」——读者读完这一段多知道了什么？没有。「两个包各注册一件 bash」在上一段的数据卡里已经给过（重名的那个名字 bash），「说明书相反」是下面两段逐条讲的内容。整段是个过场。",
+    "「它要过三道关。」——独立成段，只宣布了一个数字，紧接着的 trace 立刻把三道关全列出来了。读者从这一段拿不到任何关于 read_image 的信息。删掉，trace 自己会说话。",
+    "「工具说明书里除了「能干什么」，还有一批数字，规定它一次最多吐多少东西回来。」——过场段，而且描述跟它引出的卡片对不上：卡片八行里 terminal_read 的 500 是默认值、schedule_create 的 300 秒是最短间隔，都不是「一次最多吐多少」。",
+    "「（apps/cli/config/agent-presets/minimal/agent.cordis.yml 第 36–44 行，此处摘了其中四行）」——整段只有一条出处，且带一句关于本文排版的说明。出处应该并进上一段末尾或代码块的题注。",
+    "「前四条在 packages/fs/tool-fs/src/read.ts 第 16 行、read-render.ts 第 11 行和第 14 行、read.ts 第 22 行；glob 的 100 和 grep 的 250 是 glob.ts 第 26 行和 grep.ts 第 30 行的常量；后两条是工具目录第 861 行和第 1057 行的说明书原文。」——整段是八个行号，没有一条关于软件本身的新信息。八行数字的出处放进卡片本身（或卡片下方一行小字），不要单占一段。",
+    "末段「所以目录第 722 行印着的那句说明，和自带预设跑起来时模型实际读到的那句，不是同一句。这正是那份目录得靠启动插件才生成得出来的原因——……」——第二句是回扣第二段的循环论证：第二段已经写过「有的说明是运行时几段字符串现拼的」。读者在这一段没有多知道任何东西。"
+  ]
+}

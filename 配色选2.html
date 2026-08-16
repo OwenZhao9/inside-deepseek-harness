@@ -1,0 +1,148 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>配色第四批</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --sans:"PingFang SC","Hiragino Sans GB","Noto Sans CJK SC",-apple-system,sans-serif;
+  --mono:ui-monospace,"SF Mono",Menlo,monospace;
+  --lat:-apple-system,BlinkMacSystemFont,"Helvetica Neue",Helvetica,Arial,sans-serif;
+}
+body{background:#E9E9E7;color:#111;font-family:var(--sans);-webkit-font-smoothing:antialiased}
+.page{max-width:80rem;margin:0 auto;padding:46px 26px 90px}
+.hd h1{font-size:24px;font-weight:600;margin-bottom:8px}
+.hd p{font-size:14.5px;line-height:1.75;color:#6A6D70;max-width:42em;margin-bottom:32px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:32px}
+.slot .cap{font-size:12.5px;font-weight:600;color:#5A5D60;margin-bottom:3px}
+.slot .ref{font-size:11.5px;color:#9A9D9F;margin-bottom:10px}
+.slot .why{font-size:12.5px;line-height:1.7;color:#7A7D80;margin-top:10px}
+.slot .hex{font-family:var(--mono);font-size:11px;color:#9A9D9F;margin-top:5px}
+
+.cv{aspect-ratio:3/4;position:relative;overflow:hidden;border-radius:4px;
+  box-shadow:0 2px 6px rgba(0,0,0,.09),0 18px 44px -20px rgba(0,0,0,.3);
+  display:flex;flex-direction:column;container-type:inline-size}
+.blk{flex:1;display:flex;flex-direction:column;justify-content:center;padding:10%;position:relative;z-index:2}
+.zhs{font-size:8cqw;font-weight:700;letter-spacing:.06em;line-height:1.1;margin-bottom:1.4cqw}
+.en{font-family:var(--lat);font-size:15cqw;font-weight:700;letter-spacing:-.045em;line-height:.92;margin-bottom:4.5cqw}
+.line{height:.6cqw;width:100%;margin-bottom:4.5cqw}
+.sub{font-size:4.2cqw;font-weight:500;letter-spacing:-.01em}
+.tail{position:absolute;left:10%;bottom:7%;font-family:var(--mono);font-size:2.5cqw;letter-spacing:.05em;z-index:2}
+
+/* 1 FT 粉 */
+.c1{background:#FFF1E5}
+.c1 .zhs{color:#0D7680} .c1 .en{color:#33302E}
+.c1 .line{background:#0D7680} .c1 .sub{color:#66605C} .c1 .tail{color:#A8A19B}
+
+/* 2 蓝晒图 */
+.c2{background:#12395B}
+.c2 .grid-bg{position:absolute;inset:0;z-index:1;opacity:.22;
+  background-image:linear-gradient(#fff 1px,transparent 1px),linear-gradient(90deg,#fff 1px,transparent 1px);
+  background-size:4.5cqw 4.5cqw}
+.c2 .zhs{color:rgba(255,255,255,.7)} .c2 .en{color:#fff}
+.c2 .line{background:rgba(255,255,255,.6)} .c2 .sub{color:rgba(255,255,255,.85)} .c2 .tail{color:rgba(255,255,255,.5)}
+
+/* 3 黛 + 缃 */
+.c3{background:#3E3A5C}
+.c3 .zhs{color:#E8B84B} .c3 .en{color:#F5F2E8}
+.c3 .line{background:#E8B84B} .c3 .sub{color:rgba(245,242,232,.85)} .c3 .tail{color:rgba(245,242,232,.5)}
+
+/* 4 NASA 红 */
+.c4{background:#F7F7F5}
+.c4 .zhs{color:#FC3D21} .c4 .en{color:#0B0B0B}
+.c4 .line{background:#FC3D21;height:1.6cqw} .c4 .sub{color:#4A4A4A} .c4 .tail{color:#9E9E9E}
+
+/* 5 绿屏 */
+.c5{background:#08130D}
+.c5 .zhs{color:#3FCF7A} .c5 .en{color:#D8F5E4}
+.c5 .line{background:#3FCF7A} .c5 .sub{color:rgba(216,245,228,.72)} .c5 .tail{color:#2E7A4C;}
+
+/* 6 风格派 */
+.c6{background:#F4F2ED}
+.c6 .bar{position:absolute;z-index:1}
+.c6 .b1{left:0;top:0;width:26%;height:26%;background:#D42A20}
+.c6 .b2{right:0;bottom:0;width:34%;height:16%;background:#1C4FA8}
+.c6 .b3{right:0;top:0;width:12%;height:12%;background:#F0C020}
+.c6 .zhs{color:#111} .c6 .en{color:#111}
+.c6 .line{background:#111;height:1.2cqw} .c6 .sub{color:#4A4A4A} .c6 .tail{color:#9E9E9E}
+</style></head><body>
+
+<div class="page">
+  <div class="hd">
+    <h1>配色第四批</h1>
+    <p>来源拉开了：报纸、工程制图、航天标准手册、中国传统色、荷兰风格派。上一批你留了 3（宜家蓝黄）和 6（瑞士白黑红）当备选，这六套跟它们都不重。</p>
+  </div>
+
+  <div class="grid">
+
+    <div class="slot">
+      <div class="cap">1　报纸粉 + 墨绿</div>
+      <div class="ref">参考　Financial Times 的粉色新闻纸</div>
+      <div class="cv c1"><div class="blk">
+        <div class="zhs">深入浅出</div><div class="en">DeepSeek<br>Harness</div>
+        <div class="line"></div><div class="sub">把 AI 拴在你电脑上的那一层</div>
+      </div><div class="tail">21 篇 · 76,725 字</div></div>
+      <p class="why">FT 用这张粉纸一百多年，就是为了在报摊上一眼被认出来。粉底配墨绿，几乎没有第二家在用，而且它天生是严肃出版物的颜色，不是消费品的粉。</p>
+      <p class="hex">#FFF1E5 / #0D7680</p>
+    </div>
+
+    <div class="slot">
+      <div class="cap">2　蓝晒图</div>
+      <div class="ref">参考　工程蓝图 blueprint</div>
+      <div class="cv c2"><div class="grid-bg"></div><div class="blk">
+        <div class="zhs">深入浅出</div><div class="en">DeepSeek<br>Harness</div>
+        <div class="line"></div><div class="sub">把 AI 拴在你电脑上的那一层</div>
+      </div><div class="tail">21 篇 · 76,725 字</div></div>
+      <p class="why">十九世纪的晒图工艺留下的颜色，深普鲁士蓝配白线。这本书从第 10 篇起就是在拆一台机器的图纸——用制图的语言最贴题。网格是画出来的，不是纹理。</p>
+      <p class="hex">#12395B / #FFFFFF</p>
+    </div>
+
+    <div class="slot">
+      <div class="cap">3　黛 + 缃</div>
+      <div class="ref">参考　中国传统色</div>
+      <div class="cv c3"><div class="blk">
+        <div class="zhs">深入浅出</div><div class="en">DeepSeek<br>Harness</div>
+        <div class="line"></div><div class="sub">把 AI 拴在你电脑上的那一层</div>
+      </div><div class="tail">21 篇 · 76,725 字</div></div>
+      <p class="why">黛是画眉的青黑，缃是浅黄。两个都是中文里有名字的颜色。中文技术书用传统色的极少，辨识度靠这个，而且不显土。</p>
+      <p class="hex">#3E3A5C / #E8B84B</p>
+    </div>
+
+    <div class="slot">
+      <div class="cap">4　白底 + 一道航天红</div>
+      <div class="ref">参考　NASA 1975 图形标准手册</div>
+      <div class="cv c4"><div class="blk">
+        <div class="zhs">深入浅出</div><div class="en">DeepSeek<br>Harness</div>
+        <div class="line"></div><div class="sub">把 AI 拴在你电脑上的那一层</div>
+      </div><div class="tail">21 篇 · 76,725 字</div></div>
+      <p class="why">那本手册规定了 NASA 所有印刷品的网格和用色，红只在极少数位置出现。比瑞士那套多一点温度，比砖红干净得多——它是橙红不是土红。</p>
+      <p class="hex">#F7F7F5 / #FC3D21</p>
+    </div>
+
+    <div class="slot">
+      <div class="cap">5　绿屏</div>
+      <div class="ref">参考　早期终端的磷光屏</div>
+      <div class="cv c5"><div class="blk">
+        <div class="zhs">深入浅出</div><div class="en">DeepSeek<br>Harness</div>
+        <div class="line"></div><div class="sub">把 AI 拴在你电脑上的那一层</div>
+      </div><div class="tail">21 篇 · 76,725 字</div></div>
+      <p class="why">最贴题的一套——这本书讲的东西说到底就是「能敲命令」。但也最容易显得中二，黑客风在中文内容里已经被用滥了。放这儿供你判断。</p>
+      <p class="hex">#08130D / #3FCF7A</p>
+    </div>
+
+    <div class="slot">
+      <div class="cap">6　三块原色</div>
+      <div class="ref">参考　荷兰风格派 / 蒙德里安</div>
+      <div class="cv c6">
+        <span class="bar b1"></span><span class="bar b2"></span><span class="bar b3"></span>
+        <div class="blk">
+          <div class="zhs">深入浅出</div><div class="en">DeepSeek<br>Harness</div>
+          <div class="line"></div><div class="sub">把 AI 拴在你电脑上的那一层</div>
+        </div><div class="tail">21 篇 · 76,725 字</div>
+      </div>
+      <p class="why">白底、黑字、三块原色摆在角上。一百年前的东西，现在看还是新的。三块色块可以按篇变位置，二十一篇就是二十一个变体。</p>
+      <p class="hex">#D42A20 / #1C4FA8 / #F0C020</p>
+    </div>
+
+  </div>
+</div>
+</body></html>

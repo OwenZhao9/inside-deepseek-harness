@@ -1,0 +1,124 @@
+<article class="chapter">
+  <div class="rail"><span class="no">14</span><span class="t">工具集</span></div>
+  <h2>它手上有 51 件工具</h2>
+
+  <p>仓库里有一份文件把模型能调用的每一件东西列全了，连名字、说明书、参数格式一起：<code>docs/tool-catalog.md</code>。文件第一行写着这是脚本生成的，不许手工改。</p>
+
+  <p>生成的办法在第 8 行：脚本把每个工具插件在一个真实的运行环境里启动一遍，再问它「你打算怎么向模型自我介绍」，把答案原样抄下来。同一行给了理由——一件工具的说明书没法从源码里静态看出来，有的工具名字来自配置文件，有的说明是运行时几段字符串现拼的。同一行还写了一道完整性检查：脚本会去扫仓库里所有叫 <code>tool-*</code> 的包，只要有一个没进启动清单就报错，所以新加的工具要么进这份目录，要么让检查红掉。</p>
+
+  <p>数出来的结果：以 <code>###</code> 开头的工具条目一共 52 条，其中两条重名，都叫 <code>bash</code>。去掉重名，模型可能见到的工具名是 51 个，分属 24 个插件包。</p>
+
+  <div class="data">
+    <div class="lbl">docs/tool-catalog.md 数出来的</div>
+    <div class="rows">
+      <div class="row"><span class="k">工具条目</span><span class="v">52 条</span></div>
+      <div class="row"><span class="k">去重后的工具名</span><span class="v">51 个</span></div>
+      <div class="row"><span class="k">提供这些工具的插件包</span><span class="v">24 个</span></div>
+      <div class="row"><span class="k">重名的那个名字</span><span class="v"><code>bash</code></span></div>
+    </div>
+  </div>
+
+  <h3>两件工具都叫 bash</h3>
+
+  <p>重名不是笔误。两个不同的插件包各自注册了一件叫 <code>bash</code> 的工具，说明书写的是两件相反的事。</p>
+
+  <p><code>@deepseek-ai/dsh-tool-bash</code> 那一件，说明书第一句就写明：每次调用开一个全新的 shell（接收并执行命令的那个程序），上一次调用里换过的目录、设过的变量、定义过的函数，这一次全都不在了。所以它专门告诉模型，要换目录别用 <code>cd</code>，用 <code>workdir</code> 这个参数（目录第 182 行）。</p>
+
+  <p><code>@deepseek-ai/dsh-tool-bash-persistent</code> 那一件，说明书只有一句话：状态在多次调用之间保留，包括当前目录和导出的环境变量（目录第 508 行）。</p>
+
+  <p>后面这件要解决一个不显然的麻烦。让 shell 一直活着不难，难的是判断一条命令什么时候跑完了、跑成没跑成——一个持续开着的终端只会源源不断吐字符出来，字符流里没有任何记号标出「这条命令到此为止、结果如何」。</p>
+
+  <div class="trace">
+    <div class="t"><span class="tag">开终端时</span><p>它先往终端发一句设置，把 shell 每次等待输入时打印的那个提示记号改成 <code>__DSH_PERSISTENT_BASH_PROMPT__</code>，一个别的东西不可能撞上的字符串；同时关掉输入回显（源码第 18 行定义这个字符串，第 247 行发出去）。</p></div>
+    <div class="t"><span class="tag">每收到一条命令</span><p>它不把模型写的命令原样送进去。它现场生成一个谁也撞不上的随机串，拼成一组开始标记和结束标记，把命令夹在中间，末尾再让 shell 把退出码——命令跑完留下的一个数字，0 代表成功——打印在结束标记后面（第 62–68 行造标记，第 78–83 行拼命令）。</p></div>
+    <div class="t"><span class="tag">读回来时</span><p>它在终端吐出的一大堆字符里找那两个标记。夹在中间的就是这条命令的输出，结束标记后面跟着的数字就是退出码（第 93–108 行）。</p></div>
+    <div class="t"><span class="tag">超时时</span><p>命令超过配置的时限还没跑完，它把已经拿到的部分输出交回去，然后把整个 shell 杀掉重开，并附上一句告知：这个持久 shell 被重置了，下一次调用从工作目录、干净环境重新开始（第 17 行是这句话，第 314 行是重置动作）。攒了半天的当前目录和环境变量，在这一刻整个丢掉。</p></div>
+  </div>
+
+  <h3>工具的说明书写在配置文件里</h3>
+
+  <p>装好之后 DeepSeek Harness 自带四套预设，一套预设就是一个配置文件，规定这次会话挂哪些插件、模型面前摆哪些工具。名叫 <code>minimal</code> 的那套，文件第 1 行就自称是「两件工具的组合」，挂的正是持久 <code>bash</code> 加一个叫 <code>str_replace_editor</code> 的编辑器。另外三套（<code>standard</code>、<code>code</code>、<code>cordis</code>）挂的都是每次开新 shell 的那一件。</p>
+
+  <p><code>minimal</code> 里那一行 <code>bash</code> 的配置除了超时时长，还写了一整段 <code>description</code>。这段文字会顶掉插件自带的那句话，成为模型读到的唯一一份 <code>bash</code> 使用手册：</p>
+
+<pre><code>Run commands in a bash shell
+* You don't have access to the internet via this tool.
+* You do have access to a mirror of common linux and python packages via apt and pip.
+* State is persistent across command calls and discussions with the user.</code></pre>
+
+  <p>（<code>apps/cli/config/agent-presets/minimal/agent.cordis.yml</code> 第 36–44 行，此处摘了其中四行）</p>
+
+  <p>模型对这件工具的全部认知就是这几句话。它「知道」自己没法联网，也「知道」能用 apt 和 pip 装包。这两句是部署者敲进配置文件的字符串，运行环境是不是真这样，工具本身不核对。同一个插件换一套部署，这段文字可以完全重写，代码一行不改。</p>
+
+  <h3>它可以反过来问你</h3>
+
+  <p>51 件工具里有一件的用途是把活停下来。<code>ask_user_question</code> 收一组问题，每个问题带一个 id、一句问话，可以附一组选项，还有一个开关决定这题能不能多选（目录第 47–110 行）。</p>
+
+  <p>调用之后这次工具调用就停在那里不返回，一直等到人回答为止。这个包在自己的「已知限制」里第一条写的就是这个：待处理的问题会阻塞工具调用直到用户作答，而它没有申报任何超时预算，唯一能打断它的是这一轮对话本身被取消（<code>packages/interaction/tool-ask-user/README.zh.md</code>）。</p>
+
+  <p>人答完，模型收到的是一小段紧凑的 JSON：<code>{"answers":[{"id":"&lt;id&gt;","selected":["&lt;label&gt;"],"custom":"&lt;text&gt;"}]}</code>。<code>selected</code> 装被选中的选项标签，<code>custom</code> 装人自己填的文字。界面上那些按钮长什么样、等待期间点了几下，都不进模型的上下文。</p>
+
+  <p>什么时候准用这件工具，写死在预设的提示词里，原文是英文，意思是：先靠自己查能查到的事实；只有涉及用户自己的选择、或者查也查不出的实质性歧义，才用 <code>ask_user_question</code>；不要问用户代码在哪、现在的行为是什么——这些你查得出来（<code>apps/cli/config/agent-presets/standard/agent.cordis.yml</code> 第 120 行）。</p>
+
+  <p>还有一道拦截写在运行时里：被上级派出去干活的子任务不能问人。运行时会检查提问的这一方是不是那个直接跟人对话的顶层任务，不是就抛错，错误码叫 <code>DELEGATED_CALLER</code>，错误文本要求这个子任务把没解决的问题写进交给上级的最终结果里（<code>packages/interaction/user-questions/src/index.ts</code> 第 107–112 行）。</p>
+
+  <h3>read_image 在 DeepSeek 的模型上过不去</h3>
+
+  <p>目录第 667–669 行有一件工具叫 <code>read_image</code>，说明是：读一个 PNG/JPEG/WebP/GIF 文件，把图片本身返回来；要求当前模型接受图片输入。</p>
+
+  <p>它要过三道关。</p>
+
+  <div class="trace">
+    <div class="t"><span class="tag">第一道，注册时</span><p>部署里没挂附件存储服务，这件工具根本不会被注册，模型的工具清单里连它的名字都不会有（<code>packages/fs/tool-fs/src/index.ts</code> 第 70–72 行）。</p></div>
+    <div class="t"><span class="tag">第二道，调用时</span><p>路径的后缀必须是那四种之一，否则直接拒（<code>read-image.ts</code> 第 168–171 行）。</p></div>
+    <div class="t"><span class="tag">第三道，调用时</span><p>它去查这次请求实际发给的是哪个模型，看那个模型有没有声明自己收图片。没声明就抛错，原文是 <code>model "…" does not declare image input; switch to an image-capable model to read images</code>（<code>read-image.ts</code> 第 73–75 行）。</p></div>
+  </div>
+
+  <p>DeepSeek 自家那几个模型是怎么声明的，代码里只有一行：<code>packages/llm/llm-deepseek/src/adapter.ts</code> 第 113 行写的是 <code>inputModalities: ['text']</code>，只收文字。而附件存储服务在自带配置里是挂着的（<code>packages/bundle/base/cordis.patch.yml</code> 第 106–107 行）。两边合起来的结果：<code>read_image</code> 会出现在模型的工具清单里，会被模型看见，会被模型调用，然后在第三道关上被挡回来。</p>
+
+  <p>这道关修在工具里，源码注释给了理由：工具的返回值要进会话的持久历史，往一个收不了图片的模型的历史里塞进一张图，这条对话后面就接不下去了；所以模型能力不明的时候宁可当场拒绝，也不指望底层适配去兜底（<code>read-image.ts</code> 第 8–11 行）。</p>
+
+  <h3>让它自己往自己身上装工具</h3>
+
+  <p>51 个名字里有 7 个以 <code>cordis_</code> 开头，来自同一个包（<code>packages/extensions/tool-cordis/src/index.ts</code> 的第 42、61、97、149、241、330、352 行各写着一个工具名）。</p>
+
+  <p>这一组干的事是：模型现场写一段 JavaScript，交给 <code>cordis_define</code> 登记成一个「包」，再用 <code>cordis_run</code> 把这段代码在当前这个进程里跑起来。跑起来之后会发生什么，工具目录里有一句——这个包可以再往模型面前注册新的工具，一直有效到它被停掉、被删掉，或者 DeepSeek Harness 重启（目录第 500 行）。也就是说，一次工具调用的结果，可以是模型手上多出一件原来没有的工具。</p>
+
+  <p>边界在包自己的中文说明里列得很直白：这些包只活在进程内存里；不创建插件文件、不安装任何包、不修改配置文件、不跨重启存活，也不会自动转成正式插件；每个包只在定义它的那一个会话里可见和可控（<code>packages/extensions/tool-cordis/README.zh.md</code>）。</p>
+
+  <p>装它的代价写在明面上。四套预设里只有一套挂了这一组，就叫 <code>cordis</code>（<code>apps/cli/config/agent-presets/cordis/agent.cordis.yml</code> 第 245–246 行）。这个文件开头单独有一段以 TRUST 打头的说明，讲这个预设写出来的组合会被别的会话挂载使用，因此把在这个预设上的会话当成 shell 权限来对待（第 9–12 行）。包自己的信任声明用了同一个比喻，并补了一句：那个沙箱隔离全局变量，但它不是安全边界。</p>
+
+  <h3>有一件工具的工作是调用别的工具</h3>
+
+  <p><code>run_code</code> 让模型写一段 TypeScript 程序，在程序里按名字去调其他工具；只有程序打印出来和返回的东西才回到模型手里——说明书原话是「只有你打印或返回的才回来，自己挑」（目录第 123 行）。一次工具调用里可以套着几十次工具调用，中间过程不占模型的上下文。</p>
+
+  <p>它默认不在场。工具注册表有一项配置决定工具以什么形式摆到模型面前，可选 <code>native</code>、<code>code</code>、<code>both</code> 三个值，默认是 <code>native</code>（<code>packages/core/tools/src/index.ts</code> 第 791 行），只有切到后两个，<code>run_code</code> 才会出现。自带的配置文件里没写这一项，旁边的注释说明这是有意的：形式属于部署方的选择，不写就用默认值 <code>native</code>（<code>packages/bundle/base/cordis.patch.yml</code> 第 422–425 行）。</p>
+
+  <h3>每件工具都带着一条上限</h3>
+
+  <p>工具说明书里除了「能干什么」，还有一批数字，规定它一次最多吐多少东西回来。</p>
+
+  <div class="data">
+    <div class="lbl">几件常用工具的上限</div>
+    <div class="rows">
+      <div class="row"><span class="k">read 一次最多读</span><span class="v">2000 行（默认值同时也是上限）</span></div>
+      <div class="row"><span class="k">单行超过这么长就截断</span><span class="v">2000 个字符</span></div>
+      <div class="row"><span class="k">选中的这些行加起来超过就截断</span><span class="v">50 KB</span></div>
+      <div class="row"><span class="k">文件大到这个尺寸就改成流式读</span><span class="v">10 MB</span></div>
+      <div class="row"><span class="k">glob 最多回</span><span class="v">100 个路径</span></div>
+      <div class="row"><span class="k">grep 最多回</span><span class="v">前 250 条匹配</span></div>
+      <div class="row"><span class="k">terminal_read 默认回</span><span class="v">500 行</span></div>
+      <div class="row"><span class="k">schedule_create 的固定间隔最短</span><span class="v">300 秒</span></div>
+    </div>
+  </div>
+
+  <p>前四条在 <code>packages/fs/tool-fs/src/read.ts</code> 第 16 行、<code>read-render.ts</code> 第 11 行和第 14 行、<code>read.ts</code> 第 22 行；<code>glob</code> 的 100 和 <code>grep</code> 的 250 是 <code>glob.ts</code> 第 26 行和 <code>grep.ts</code> 第 30 行的常量；后两条是工具目录第 861 行和第 1057 行的说明书原文。</p>
+
+  <p>撞上上限之后怎么办，也是写好的。<code>read</code> 一旦被字节数截断，返回的末尾会补一行 <code>Output capped.</code>，报出这次实际显示到第几行，并把接着往下读该填的 <code>offset</code> 参数直接算好给出来（<code>read-render.ts</code> 第 155–156 行）。</p>
+
+  <p><code>glob</code> 撞上 100 个的办法有两种，选哪种是配置文件里的一个开关。开关打开，它在各个顶层目录之间采样凑 100 个，让结果横跨整棵树；开关关掉，它取按修改时间排在最前面的 100 个。两种都会说明自己截了，并报告完整的排序列表存到了哪里（<code>glob.ts</code> 第 235–239 行）。</p>
+
+  <p>这个开关不只改行为，还改模型读到的说明书。注册这件工具的代码里，那句话是现拼的：开关打开，拼进去的半句是「更大的结果会改成在顶层条目之间采样取 100 个」；开关关掉，拼进去的是「更大的结果返回按修改时间排序的前 100 个」（<code>glob.ts</code> 第 308–310 行）。自带的四套预设里有三套挂了这件工具，三套都把开关设成了关（<code>standard</code> 第 59–62 行、<code>code</code> 第 66–69 行、<code>cordis</code> 第 60–63 行），而生成工具目录时选的是开。</p>
+
+  <p>所以目录第 722 行印着的那句说明，和自带预设跑起来时模型实际读到的那句，不是同一句。这正是那份目录得靠启动插件才生成得出来的原因——<code>glob</code> 的说明书在源码里根本不是一个完整的字符串，它是两个半句加一个条件判断，得等配置填进来才拼得出来。</p>
+</article>

@@ -1,0 +1,237 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>标题与术语 · 再五种</title>
+<style>
+:root{
+  --bg:#FCFCFB; --surf:#FFF; --ink:#101113; --body:#3A3D40; --grey:#75787C; --faint:#A6A9AC;
+  --rule:#E5E5E2; --hair:#EFEFEC;
+  --hot:#DD4B32; --hot-deep:#B93A24; --hot-wash:#FDF0ED; --hot-line:#F5CFC6;
+  --sans:"PingFang SC","Hiragino Sans GB","Noto Sans CJK SC",-apple-system,sans-serif;
+  --en:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root{ --bg:#0D0E10; --surf:#141618; --ink:#F2F2F0; --body:#C4C7CB; --grey:#8A8E93; --faint:#5F6367;
+         --rule:#25282C; --hair:#1C1F22; --hot:#FF7A5C; --hot-deep:#FF9578; --hot-wash:#22150F; --hot-line:#40241B; }
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--body);font-family:var(--sans);-webkit-font-smoothing:antialiased}
+.page{max-width:47rem;margin:0 auto;padding:56px 30px 130px}
+.hd h1{font-size:26px;font-weight:600;color:var(--ink);letter-spacing:-.02em;margin-bottom:12px}
+.hd p{font-size:15px;line-height:1.85;color:var(--grey);max-width:34em}
+
+.opt{border-top:1px solid var(--rule);margin-top:56px;padding-top:22px}
+.opt > .tag{font-size:11px;letter-spacing:.24em;color:var(--hot-deep);font-weight:600;
+  display:flex;align-items:center;gap:9px;margin-bottom:7px}
+.opt > .tag::before{content:"";width:18px;height:2px;background:var(--hot);border-radius:2px}
+.opt > .why{font-size:13.5px;line-height:1.8;color:var(--grey);margin-bottom:28px;max-width:33em}
+
+.demo{background:var(--surf);border:1px solid var(--hair);border-radius:14px;
+  padding:0;margin-bottom:13px;position:relative;overflow:hidden}
+.demo .pad{padding:38px 36px}
+.demo > .ed{position:absolute;bottom:12px;right:16px;z-index:4;
+  font-size:10px;letter-spacing:.2em;color:var(--faint);font-weight:600}
+.demo.en{font-family:var(--en)}
+.demo.en .body{line-height:1.72}
+@media (max-width:600px){ .demo .pad{padding:28px 20px} }
+
+.lead{font-size:clamp(25px,5vw,34px);font-weight:600;color:var(--ink);line-height:1.32;letter-spacing:-.02em}
+.body{margin-top:26px;font-size:15.5px;line-height:1.9;color:var(--body)}
+.no{font-size:10.5px;letter-spacing:.26em;color:var(--faint);font-weight:600;margin-bottom:13px}
+
+/* ═════ M 角标签 ═════ */
+.M .tabwrap{position:absolute;top:0;right:0;z-index:2}
+.M .tab{
+  background:var(--hot);color:#FFF;padding:11px 18px 13px;
+  border-radius:0 0 0 12px;font-size:15px;font-weight:700;letter-spacing:.03em;
+  display:block;line-height:1.2;
+}
+.M .tab small{display:block;font-size:9.5px;letter-spacing:.2em;opacity:.72;font-weight:600;margin-bottom:3px}
+.M .pad{padding-right:130px}
+@media (prefers-color-scheme:dark){ .M .tab{color:#160F0B} }
+@media (max-width:560px){ .M .pad{padding-right:36px;padding-top:62px} }
+
+/* ═════ N 整句副标题：术语长在句子里 ═════ */
+.N .lead{margin-bottom:14px}
+.N .sent{font-size:19px;font-weight:400;color:var(--grey);line-height:1.6;letter-spacing:.005em}
+.N .sent b{font-size:23px;font-weight:700;color:var(--hot);letter-spacing:-.01em;
+  padding:0 2px;position:relative;white-space:nowrap}
+.N .sent b::after{content:"";position:absolute;left:2px;right:2px;bottom:-1px;height:3px;
+  background:var(--hot);opacity:.28;border-radius:2px}
+
+/* ═════ P 全书术语索引条 ═════ */
+.P .strip{
+  display:flex;flex-wrap:wrap;gap:5px;margin:0 0 20px;padding:0 0 16px;
+  border-bottom:1px solid var(--hair);
+}
+.P .strip span{
+  font-size:11px;padding:3px 8px;border-radius:5px;color:var(--faint);
+  background:var(--hair);white-space:nowrap;
+}
+.P .strip span.on{background:var(--hot);color:#FFF;font-weight:700}
+.P .strip span.dim{opacity:.45}
+@media (prefers-color-scheme:dark){ .P .strip span.on{color:#160F0B} }
+
+/* ═════ Q 右侧超大竖排 ═════ */
+.Q .split{display:flex;align-items:stretch;gap:22px}
+.Q .l{flex:1 1 auto;min-width:0}
+.Q .big{
+  flex:none;writing-mode:vertical-rl;text-orientation:mixed;
+  font-size:clamp(40px,7.5vw,58px);font-weight:800;color:var(--hot);
+  letter-spacing:.02em;line-height:1;opacity:.92;
+}
+@media (max-width:600px){
+  .Q .split{flex-direction:column-reverse;gap:12px}
+  .Q .big{writing-mode:horizontal-tb;font-size:40px;line-height:1.1}
+}
+
+/* ═════ S 等宽字：术语当代码标识符排 ═════ */
+.S .term{
+  font-family:var(--mono);font-size:clamp(19px,3.8vw,24px);font-weight:500;
+  color:var(--hot);letter-spacing:-.01em;margin-top:15px;display:flex;
+  align-items:center;gap:10px;
+}
+.S .term::before{content:"//";color:var(--hot-line);font-weight:400}
+</style></head><body>
+
+<div class="page">
+
+  <div class="hd">
+    <h1>再五种</h1>
+    <p>跟前十二种都不重样。前面那些改的是位置和字号，这五种各自换了一个思路：贴成标签、长进句子里、放进全书索引、竖着占满右边、用等宽字排。照旧中英各一张。</p>
+  </div>
+
+  <!-- M -->
+  <section class="opt M">
+    <div class="tag">M　角标签</div>
+    <p class="why">术语贴在右上角，像书页边上的索引标签。它跟标题完全不在一条流上，所以标题多长都不干扰。实体书里这种标签是能摸到、能一把翻到的东西，做成 21 个不同位置的标签，侧面看过去就是一本书的目录。</p>
+    <div class="demo">
+      <div class="tabwrap"><span class="tab"><small>第三篇</small>马具</span></div>
+      <div class="pad">
+        <p class="lead">马有的是力气，可它拉不动车</p>
+        <div class="body"><p>马有的是力气。可一匹什么都没套的马拉不动车——它不知道该往哪边走，使出来的力气也没地方传出去⋯⋯</p></div>
+      </div>
+      <span class="ed">中文版</span>
+    </div>
+    <div class="demo en">
+      <div class="tabwrap"><span class="tab"><small>CH. 3</small>Harness</span></div>
+      <div class="pad">
+        <p class="lead">A horse has all the strength in the world, and still cannot pull a cart</p>
+        <div class="body"><p>A horse has plenty of strength. But a horse with nothing strapped to it cannot pull a cart⋯</p></div>
+      </div>
+      <span class="ed">ENGLISH</span>
+    </div>
+  </section>
+
+  <!-- N -->
+  <section class="opt N">
+    <div class="tag">N　长进句子里</div>
+    <p class="why">副标题不是一个光秃秃的名词，而是一整句话，术语长在句子中间被划出来。区别在于：名词只是贴标签，句子会教人。读者看完这一行就已经知道这个词指什么了，不用等正文。</p>
+    <div class="demo">
+      <div class="pad">
+        <p class="no">第三篇 · 03</p>
+        <p class="lead">马有的是力气，可它拉不动车</p>
+        <p class="sent">缺的那套东西，叫<b>马具</b>。</p>
+        <div class="body"><p>马有的是力气。可一匹什么都没套的马拉不动车——它不知道该往哪边走，使出来的力气也没地方传出去⋯⋯</p></div>
+      </div>
+      <span class="ed">中文版</span>
+    </div>
+    <div class="demo en">
+      <div class="pad">
+        <p class="no">CHAPTER 3 · 03</p>
+        <p class="lead">A horse has all the strength in the world, and still cannot pull a cart</p>
+        <p class="sent">The missing piece is called a <b>harness</b>.</p>
+        <div class="body"><p>A horse has plenty of strength. But a horse with nothing strapped to it cannot pull a cart⋯</p></div>
+      </div>
+      <span class="ed">ENGLISH</span>
+    </div>
+  </section>
+
+  <!-- P -->
+  <section class="opt P">
+    <div class="tag">P　全书术语索引条</div>
+    <p class="why">篇首横着排一条全书术语表，当前这篇高亮，读过的正常，没读的变淡。读者每开一篇都看见这个词在整本书里的位置，也看见还剩多少。缺点是 21 个词占地方，而且泄露后面的内容。</p>
+    <div class="demo">
+      <div class="pad">
+        <div class="strip">
+          <span>开源</span><span>大模型的边界</span><span class="on">马具</span>
+          <span class="dim">能力边界</span><span class="dim">第一次对话</span><span class="dim">插件架构</span>
+          <span class="dim">上下文窗口</span><span class="dim">事件日志</span><span class="dim">工具集</span>
+          <span class="dim">子代理</span><span class="dim">设计笔记</span><span class="dim">事故复盘</span><span class="dim">⋯</span>
+        </div>
+        <p class="no">第三篇 · 03</p>
+        <p class="lead">马有的是力气，可它拉不动车</p>
+        <div class="body"><p>马有的是力气。可一匹什么都没套的马拉不动车⋯⋯</p></div>
+      </div>
+      <span class="ed">中文版</span>
+    </div>
+    <div class="demo en">
+      <div class="pad">
+        <div class="strip">
+          <span>Release</span><span>Model limits</span><span class="on">Harness</span>
+          <span class="dim">Capabilities</span><span class="dim">First run</span><span class="dim">Plugins</span>
+          <span class="dim">Context window</span><span class="dim">Event log</span><span class="dim">Tools</span>
+          <span class="dim">Subagents</span><span class="dim">Design notes</span><span class="dim">⋯</span>
+        </div>
+        <p class="no">CHAPTER 3 · 03</p>
+        <p class="lead">A horse has all the strength in the world, and still cannot pull a cart</p>
+        <div class="body"><p>A horse has plenty of strength. But a horse with nothing strapped to it cannot pull a cart⋯</p></div>
+      </div>
+      <span class="ed">ENGLISH</span>
+    </div>
+  </section>
+
+  <!-- Q -->
+  <section class="opt Q">
+    <div class="tag">Q　右侧超大竖排</div>
+    <p class="why">术语竖着立在右边，字号做到比标题还大。跟 I 那条侧栏不同——这里没有色块，就是几个大字站在那儿，靠体量说话。整页会变成一个左密右疏的不对称版面。英文会躺倒 90 度。</p>
+    <div class="demo">
+      <div class="pad"><div class="split">
+        <div class="l">
+          <p class="no">第三篇 · 03</p>
+          <p class="lead">马有的是力气，可它拉不动车</p>
+          <div class="body"><p>马有的是力气。可一匹什么都没套的马拉不动车——它不知道该往哪边走，使出来的力气也没地方传出去。缺的是套在它身上、把它和车连起来的那一整套东西⋯⋯</p></div>
+        </div>
+        <div class="big">马具</div>
+      </div></div>
+      <span class="ed">中文版</span>
+    </div>
+    <div class="demo en">
+      <div class="pad"><div class="split">
+        <div class="l">
+          <p class="no">CHAPTER 3 · 03</p>
+          <p class="lead">A horse has all the strength in the world, and still cannot pull a cart</p>
+          <div class="body"><p>A horse has plenty of strength. But a horse with nothing strapped to it cannot pull a cart. It has no idea which way to go, and the strength it does have has nowhere to go either⋯</p></div>
+        </div>
+        <div class="big">HARNESS</div>
+      </div></div>
+      <span class="ed">ENGLISH</span>
+    </div>
+  </section>
+
+  <!-- S -->
+  <section class="opt S">
+    <div class="tag">S　等宽字</div>
+    <p class="why">术语换成等宽字体排，前面加两道斜杠——写代码的人一眼认得，那是注释的记号。这本书讲的就是软件，用软件自己的字体排它的术语，是最贴题的一种。改的不是位置，是质感。</p>
+    <div class="demo">
+      <div class="pad">
+        <p class="no">第三篇 · 03</p>
+        <p class="lead">马有的是力气，可它拉不动车</p>
+        <p class="term">马具　harness</p>
+        <div class="body"><p>马有的是力气。可一匹什么都没套的马拉不动车⋯⋯</p></div>
+      </div>
+      <span class="ed">中文版</span>
+    </div>
+    <div class="demo en">
+      <div class="pad">
+        <p class="no">CHAPTER 3 · 03</p>
+        <p class="lead">A horse has all the strength in the world, and still cannot pull a cart</p>
+        <p class="term">harness</p>
+        <div class="body"><p>A horse has plenty of strength. But a horse with nothing strapped to it cannot pull a cart⋯</p></div>
+      </div>
+      <span class="ed">ENGLISH</span>
+    </div>
+  </section>
+
+</div>
+</body></html>

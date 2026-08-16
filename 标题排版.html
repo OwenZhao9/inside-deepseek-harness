@@ -1,0 +1,205 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>标题与术语的六种排法</title>
+<style>
+:root{
+  --bg:#FCFCFB; --surf:#FFF; --ink:#101113; --body:#3A3D40; --grey:#75787C; --faint:#A6A9AC;
+  --rule:#E5E5E2; --hair:#EFEFEC;
+  --hot:#DD4B32; --hot-deep:#B93A24; --hot-wash:#FDF0ED; --hot-line:#F5CFC6;
+  --sans:"PingFang SC","Hiragino Sans GB","Noto Sans CJK SC",-apple-system,sans-serif;
+  --en:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+@media (prefers-color-scheme:dark){
+  :root{ --bg:#0D0E10; --surf:#141618; --ink:#F2F2F0; --body:#C4C7CB; --grey:#8A8E93; --faint:#5F6367;
+         --rule:#25282C; --hair:#1C1F22; --hot:#FF7A5C; --hot-deep:#FF9578; --hot-wash:#22150F; --hot-line:#40241B; }
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--body);font-family:var(--sans);-webkit-font-smoothing:antialiased}
+.page{max-width:47rem;margin:0 auto;padding:56px 30px 130px}
+.hd h1{font-size:26px;font-weight:600;color:var(--ink);letter-spacing:-.02em;margin-bottom:12px}
+.hd p{font-size:15px;line-height:1.85;color:var(--grey);max-width:34em}
+.hd p + p{margin-top:12px}
+
+.opt{border-top:1px solid var(--rule);margin-top:56px;padding-top:22px}
+.opt > .tag{font-size:11px;letter-spacing:.24em;color:var(--hot-deep);font-weight:600;
+  display:flex;align-items:center;gap:9px;margin-bottom:7px}
+.opt > .tag::before{content:"";width:18px;height:2px;background:var(--hot);border-radius:2px}
+.opt > .why{font-size:13.5px;line-height:1.8;color:var(--grey);margin-bottom:14px;max-width:33em}
+.opt > .en-note{font-size:12.5px;line-height:1.75;color:var(--hot-deep);margin-bottom:30px;max-width:33em;
+  padding-left:11px;border-left:2px solid var(--hot-line)}
+
+.demo{background:var(--surf);border:1px solid var(--hair);border-radius:14px;padding:40px 36px;margin-bottom:13px;position:relative}
+.demo::after{content:attr(data-ed);position:absolute;top:14px;right:16px;
+  font-size:10px;letter-spacing:.2em;color:var(--faint);font-weight:600}
+.demo.en{font-family:var(--en)}
+.demo.en .body{line-height:1.72}
+@media (max-width:600px){ .demo{padding:30px 22px} }
+
+.numrow{display:flex;align-items:baseline;gap:13px;margin-bottom:17px}
+.numrow .n{font-size:46px;font-weight:200;line-height:.86;color:var(--hot);letter-spacing:-.04em}
+.numrow .lab{font-size:10.5px;letter-spacing:.26em;color:var(--faint);font-weight:500}
+.body{margin-top:26px;font-size:15.5px;line-height:1.9;color:var(--body)}
+
+/* ═════ A 反转 ═════ */
+.A .lead{font-size:20px;font-weight:400;color:var(--grey);line-height:1.5;margin-bottom:11px}
+.A .term{font-size:clamp(31px,6.4vw,44px);font-weight:700;color:var(--hot);line-height:1.16;letter-spacing:-.02em}
+
+/* ═════ B 大字号副标题（现在这版的加强） ═════ */
+.B .lead{font-size:clamp(25px,5vw,34px);font-weight:600;color:var(--ink);line-height:1.32;
+  letter-spacing:-.02em;margin-bottom:13px}
+.B .term{font-size:clamp(22px,4.4vw,29px);font-weight:600;color:var(--hot);line-height:1.35;letter-spacing:-.01em}
+
+/* ═════ C 实心块 ═════ */
+.C .lead{font-size:clamp(25px,5vw,34px);font-weight:600;color:var(--ink);line-height:1.32;
+  letter-spacing:-.02em;margin-bottom:19px}
+.C .term{display:inline-block;background:var(--hot);color:#FFF;padding:9px 19px 10px;border-radius:8px;
+  font-size:21px;font-weight:600;line-height:1.25;letter-spacing:.005em}
+@media (prefers-color-scheme:dark){ .C .term{color:#160F0B} }
+
+/* ═════ D 粗线分隔 ═════ */
+.D .lead{font-size:clamp(25px,5vw,34px);font-weight:600;color:var(--ink);line-height:1.32;
+  letter-spacing:-.02em;margin-bottom:17px}
+.D .bar{display:flex;align-items:baseline;gap:16px;border-top:2px solid var(--ink);padding-top:12px}
+.D .bar .k{font-size:10.5px;letter-spacing:.22em;color:var(--faint);font-weight:600;white-space:nowrap}
+.D .bar .term{margin-left:auto;text-align:right;font-size:clamp(21px,4.2vw,27px);
+  font-weight:700;color:var(--hot);line-height:1.25;letter-spacing:-.01em}
+
+/* ═════ E 眉标 ═════ */
+.E .term{font-size:13px;font-weight:700;color:var(--hot);letter-spacing:.26em;
+  text-transform:uppercase;margin-bottom:13px}
+.E .lead{font-size:clamp(26px,5.2vw,36px);font-weight:600;color:var(--ink);line-height:1.3;letter-spacing:-.02em}
+
+/* ═════ F 身份行 ═════ */
+.F .idline{display:flex;align-items:baseline;margin-bottom:18px;
+  border-bottom:1px solid var(--rule);padding-bottom:13px;gap:0 12px}
+.F .idline .n{font-size:31px;font-weight:200;color:var(--hot);letter-spacing:-.04em;line-height:1}
+.F .idline .sep{font-size:15px;color:var(--faint)}
+.F .idline .term{font-size:21px;font-weight:700;color:var(--hot);letter-spacing:-.01em;line-height:1}
+.F .idline .lab{margin-left:auto;font-size:10.5px;letter-spacing:.24em;color:var(--faint);font-weight:500}
+.F .lead{font-size:clamp(26px,5.2vw,36px);font-weight:600;color:var(--ink);line-height:1.3;letter-spacing:-.02em}
+</style></head><body>
+
+<div class="page">
+
+  <div class="hd">
+    <h1>标题与术语的六种排法</h1>
+    <p>中文版和英文版共用一套排版，所以每种排法都排两遍：上面是中文版，下面是英文版。<strong>英文只是占位示意，不是定稿</strong>。</p>
+    <p>要盯的是这件事：同一句话，中文十来个字，英文常常三四十个字符，标题会从一行变成两三行。<strong>凡是靠标题短才好看的排法，到英文版就散了。</strong></p>
+  </div>
+
+  <!-- A -->
+  <section class="opt A">
+    <div class="tag">A　反转</div>
+    <p class="why">白话那句退成小号引子，术语顶到主标题的位置。读者合上书该记住的是那个词。</p>
+    <p class="en-note">英文版风险：作引子的那句话本来就长，退到 20px 之后会占三行，反而比术语还占地方，主次被字数拉回去了。</p>
+    <div class="demo" data-ed="中文版">
+      <div class="numrow"><span class="n">03</span><span class="lab">第三篇</span></div>
+      <p class="lead">马有的是力气，可它拉不动车</p>
+      <p class="term">马具</p>
+      <div class="body"><p>马有的是力气。可一匹什么都没套的马拉不动车⋯⋯</p></div>
+    </div>
+    <div class="demo en" data-ed="ENGLISH">
+      <div class="numrow"><span class="n">03</span><span class="lab">CHAPTER 3</span></div>
+      <p class="lead">A horse has all the strength in the world, and still cannot pull a cart</p>
+      <p class="term">Harness</p>
+      <div class="body"><p>A horse has plenty of strength. But a horse with nothing strapped to it cannot pull a cart⋯</p></div>
+    </div>
+  </section>
+
+  <!-- B -->
+  <section class="opt B">
+    <div class="tag">B　大字号副标题</div>
+    <p class="why">就是现在这一版，只是把术语从 20px 提到 29px，跟标题的差距从将近一倍缩到很小。改动最小。</p>
+    <p class="en-note">英文版没问题：两行都能自由折行，谁长谁短都不影响结构。</p>
+    <div class="demo" data-ed="中文版">
+      <div class="numrow"><span class="n">03</span><span class="lab">第三篇</span></div>
+      <p class="lead">马有的是力气，可它拉不动车</p>
+      <p class="term">马具</p>
+      <div class="body"><p>马有的是力气。可一匹什么都没套的马拉不动车⋯⋯</p></div>
+    </div>
+    <div class="demo en" data-ed="ENGLISH">
+      <div class="numrow"><span class="n">03</span><span class="lab">CHAPTER 3</span></div>
+      <p class="lead">A horse has all the strength in the world, and still cannot pull a cart</p>
+      <p class="term">Harness</p>
+      <div class="body"><p>A horse has plenty of strength. But a horse with nothing strapped to it cannot pull a cart⋯</p></div>
+    </div>
+  </section>
+
+  <!-- C -->
+  <section class="opt C">
+    <div class="tag">C　实心块</div>
+    <p class="why">术语做成砖红实心块、白字。字号不用做大就很重，因为满页文字里一块实心色最抢眼。缺点是块状元素多了会像 PPT。</p>
+    <p class="en-note">英文版没问题：块会跟着字长自己伸缩，长术语（context window）也撑得住。</p>
+    <div class="demo" data-ed="中文版">
+      <div class="numrow"><span class="n">03</span><span class="lab">第三篇</span></div>
+      <p class="lead">马有的是力气，可它拉不动车</p>
+      <p><span class="term">马具</span></p>
+      <div class="body"><p>马有的是力气。可一匹什么都没套的马拉不动车⋯⋯</p></div>
+    </div>
+    <div class="demo en" data-ed="ENGLISH">
+      <div class="numrow"><span class="n">03</span><span class="lab">CHAPTER 3</span></div>
+      <p class="lead">A horse has all the strength in the world, and still cannot pull a cart</p>
+      <p><span class="term">Harness</span></p>
+      <div class="body"><p>A horse has plenty of strength. But a horse with nothing strapped to it cannot pull a cart⋯</p></div>
+    </div>
+  </section>
+
+  <!-- D -->
+  <section class="opt D">
+    <div class="tag">D　粗线分隔</div>
+    <p class="why">标题下拉一道粗黑线，术语挂在线的右端。左端那句小字直接说明这个位置是干什么的——你定这条规矩的本意就是这个。术语靠位置压场，不跟标题抢字号。</p>
+    <p class="en-note">英文版最稳的一版：标题折几行都不影响，那道线永远在标题底下，术语永远在右端。跟字数完全无关。</p>
+    <div class="demo" data-ed="中文版">
+      <div class="numrow"><span class="n">03</span><span class="lab">第三篇</span></div>
+      <p class="lead">马有的是力气，可它拉不动车</p>
+      <div class="bar"><span class="k">这一篇要记住的词</span><span class="term">马具</span></div>
+      <div class="body"><p>马有的是力气。可一匹什么都没套的马拉不动车⋯⋯</p></div>
+    </div>
+    <div class="demo en" data-ed="ENGLISH">
+      <div class="numrow"><span class="n">03</span><span class="lab">CHAPTER 3</span></div>
+      <p class="lead">A horse has all the strength in the world, and still cannot pull a cart</p>
+      <div class="bar"><span class="k">THE TERM TO REMEMBER</span><span class="term">Harness</span></div>
+      <div class="body"><p>A horse has plenty of strength. But a horse with nothing strapped to it cannot pull a cart⋯</p></div>
+    </div>
+  </section>
+
+  <!-- E -->
+  <section class="opt E">
+    <div class="tag">E　眉标</div>
+    <p class="why">术语提到标题上方，拉开字距的小号红字。编辑设计里最常见，一眼知道是分类信息。代价是读者先看到术语再看到白话，跟「先白话后术语」的次序反了。</p>
+    <p class="en-note">英文版反而更自然：拉开字距的全大写小字是英文排版里的老手法，比在中文里更顺眼。</p>
+    <div class="demo" data-ed="中文版">
+      <div class="numrow"><span class="n">03</span><span class="lab">第三篇</span></div>
+      <p class="term">马具</p>
+      <p class="lead">马有的是力气，可它拉不动车</p>
+      <div class="body"><p>马有的是力气。可一匹什么都没套的马拉不动车⋯⋯</p></div>
+    </div>
+    <div class="demo en" data-ed="ENGLISH">
+      <div class="numrow"><span class="n">03</span><span class="lab">CHAPTER 3</span></div>
+      <p class="term">Harness</p>
+      <p class="lead">A horse has all the strength in the world, and still cannot pull a cart</p>
+      <div class="body"><p>A horse has plenty of strength. But a horse with nothing strapped to it cannot pull a cart⋯</p></div>
+    </div>
+  </section>
+
+  <!-- F -->
+  <section class="opt F">
+    <div class="tag">F　身份行</div>
+    <p class="why">术语不当副标题，跟篇号并成一行做「身份行」——03 · 马具。白话标题保持最大、位置不动，术语靠站位拿份量。最省纵向空间的一版。</p>
+    <p class="en-note">英文版没问题：那一行只放篇号和术语，两个都短，中英文都不会挤。标题在下面爱折几行折几行。</p>
+    <div class="demo" data-ed="中文版">
+      <div class="idline"><span class="n">03</span><span class="sep">·</span>
+        <span class="term">马具</span><span class="lab">第三篇</span></div>
+      <p class="lead">马有的是力气，可它拉不动车</p>
+      <div class="body"><p>马有的是力气。可一匹什么都没套的马拉不动车⋯⋯</p></div>
+    </div>
+    <div class="demo en" data-ed="ENGLISH">
+      <div class="idline"><span class="n">03</span><span class="sep">·</span>
+        <span class="term">Harness</span><span class="lab">CHAPTER 3</span></div>
+      <p class="lead">A horse has all the strength in the world, and still cannot pull a cart</p>
+      <div class="body"><p>A horse has plenty of strength. But a horse with nothing strapped to it cannot pull a cart⋯</p></div>
+    </div>
+  </section>
+
+</div>
+</body></html>

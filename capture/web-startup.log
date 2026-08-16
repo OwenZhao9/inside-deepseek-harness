@@ -1,0 +1,43 @@
+file:///Users/USER/.npm/_npx/b86ed90107c62dab/node_modules/@deepseek-ai/dsh-app-boot/lib/index.js:1186
+		throw new Error(`${binName}: ${stage}: ${detail}${stack}`, { cause });
+		      ^
+
+Error: dsh: plugin tree failed to load: failed to apply loader entry include (cordis:include): failed to apply loader entry webserver (@deepseek-ai/dsh-host-webserver): listen EADDRINUSE: address already in use 127.0.0.1:3080
+Error: listen EADDRINUSE: address already in use 127.0.0.1:3080
+    at Server.setupListenHandle [as _listen2] (node:net:2008:16)
+    at listenInCluster (node:net:2065:12)
+    at node:net:2274:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+    at boot (file:///Users/USER/.npm/_npx/b86ed90107c62dab/node_modules/@deepseek-ai/dsh-app-boot/lib/index.js:1186:9)
+    at async runProfile (file:///Users/USER/.npm/_npx/b86ed90107c62dab/node_modules/@deepseek-ai/dsh/lib/profile-boot-DG5t9aNs.js:247:14)
+    at async file:///Users/USER/.npm/_npx/b86ed90107c62dab/node_modules/@deepseek-ai/dsh/lib/bin.js:133:3 {
+  [cause]: Error: failed to apply loader entry include (cordis:include): failed to apply loader entry webserver (@deepseek-ai/dsh-host-webserver): listen EADDRINUSE: address already in use 127.0.0.1:3080
+      at updateError (file:///Users/USER/.npm/_npx/b86ed90107c62dab/node_modules/@deepseek-ai/cordis-plugin-loader/lib/index.js:299:9)
+      at Entry._init (file:///Users/USER/.npm/_npx/b86ed90107c62dab/node_modules/@deepseek-ai/cordis-plugin-loader/lib/index.js:519:10)
+      at async Entry.init (file:///Users/USER/.npm/_npx/b86ed90107c62dab/node_modules/@deepseek-ai/cordis-plugin-loader/lib/index.js:495:4)
+      at async Entry.update (file:///Users/USER/.npm/_npx/b86ed90107c62dab/node_modules/@deepseek-ai/cordis-plugin-loader/lib/index.js:416:37)
+      at async EntryGroup.create (file:///Users/USER/.npm/_npx/b86ed90107c62dab/node_modules/@deepseek-ai/cordis-plugin-loader/lib/index.js:55:4)
+      at async Proxy.create (file:///Users/USER/.npm/_npx/b86ed90107c62dab/node_modules/@deepseek-ai/cordis-plugin-loader/lib/index.js:217:14)
+      at async mountRootInclude (file:///Users/USER/.npm/_npx/b86ed90107c62dab/node_modules/@deepseek-ai/dsh-app-boot/lib/index.js:984:20)
+      at async boot (file:///Users/USER/.npm/_npx/b86ed90107c62dab/node_modules/@deepseek-ai/dsh-app-boot/lib/index.js:1175:3)
+      at async runProfile (file:///Users/USER/.npm/_npx/b86ed90107c62dab/node_modules/@deepseek-ai/dsh/lib/profile-boot-DG5t9aNs.js:247:14)
+      at async file:///Users/USER/.npm/_npx/b86ed90107c62dab/node_modules/@deepseek-ai/dsh/lib/bin.js:133:3 {
+    [cause]: Error: failed to apply loader entry webserver (@deepseek-ai/dsh-host-webserver): listen EADDRINUSE: address already in use 127.0.0.1:3080
+        at updateError (file:///Users/USER/.npm/_npx/b86ed90107c62dab/node_modules/@deepseek-ai/cordis-plugin-loader/lib/index.js:299:9)
+        at file:///Users/USER/.dsh/profiles/web/#include {
+      [cause]: Error: listen EADDRINUSE: address already in use 127.0.0.1:3080
+          at Server.setupListenHandle [as _listen2] (node:net:2008:16)
+          at listenInCluster (node:net:2065:12)
+          at node:net:2274:7
+          at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+        code: 'EADDRINUSE',
+        errno: -48,
+        syscall: 'listen',
+        address: '127.0.0.1',
+        port: 3080
+      }
+    }
+  }
+}
+
+Node.js v25.8.2

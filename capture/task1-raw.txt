@@ -1,0 +1,2 @@
+
+dsh: AUTH: Authentication Fails, Your api key: ****3080 is invalid

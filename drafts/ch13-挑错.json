@@ -1,0 +1,173 @@
+{
+  "no": "13",
+  "title": "每一步都记账",
+  "verdict": "需修",
+  "factErrors": [
+    {
+      "claim": "它是开发和测试时用的，不进普通安装。",
+      "problem": "这句话没有来源，而且和唯一谈到这件事的文档正面冲突。作者只做了「YAML 里 grep 不到」这一件事，就跳到「不进普通安装」这个结论——这正是「把两件都存在的事实硬连成因果」。我复核了：三个 bundle 的 cordis.patch.yml 确实 grep 不到 invariant，全仓库 *.yml/*.yaml 里只有 pnpm-lock.yaml 的依赖链接命中，非测试的 TS 里也只有 scripts/test-invariants.ts 挂载了 InvariantRegistry。前半段事实成立，后半段结论不成立。",
+      "truth": "packages/runtime-diagnostics/invariants/README.zh.md 第 69 行原话：「标准 agent 组合挂载服务和 4 个核心有状态配套入口。」英文版 README.md 第 69 行同：The standard agent composition mounts the service and its four core stateful companions. 文档明说标准组合是挂的。稿子要么删掉这句结论，要么如实写成「仓库里没有任何一份 YAML 挂了它，但包 README 第 69 行说标准 agent 组合会挂」。"
+    },
+    {
+      "claim": "那里用的写法是 Model-visible ⟺ logged，双向箭头，当且仅当。",
+      "problem": "把一个符号读出了原文没有的意思，性质接近「凭空造出一个官方公式」。AGENTS.md 第 107 行 ⟺ 后面跟的散文只写了正向一边：anything that reaches a model request must be reconstructable from the session log; a new model-visible input requires a session event。没有任何一句支持反向。更要命的是，稿子自己在三段之后就把反向推翻了——「剩下 41 种全是旁注……它们在文件里，但不会变成发给模型的一句话」。写进去的日志绝大多数不是模型可见的，「当且仅当」当场自相矛盾。",
+      "truth": "AGENTS.md:107 与 docs/architecture.md:96 讲的是同一个单向约束：进入模型请求的东西必须能从日志重建。「双向箭头，当且仅当」这半句删掉，或者改成「同一条规矩在 AGENTS.md 第 107 行又以约定的形式写了一遍」。"
+    },
+    {
+      "claim": "下一次请求要发过去的那一大段内容，就是从这个文件现算出来的。这个文件叫会话事件日志。",
+      "problem": "把持久化产物当成了真源。真源是内存里的事件日志，磁盘文件是它的落盘形式；deriveMessages() 跑在内存事件上，不是跑在文件上。invariant.ts 第 39 行是 session.deriveMessages()，读的是 session.events 这份内存快照。整篇后面「拿日志现跑一遍」「从日志里算出来」都建立在这个错位上。",
+      "truth": "docs/subsystems/persistence.zh.md 第 5 行：「session.md 描述了内存中的 Session：仅追加的 SessionEvent 日志即为真源。本页描述如何使该日志持久化。」应改成：这份只往后加的记录叫会话事件日志，它同时被写到磁盘上的这个文件里。"
+    },
+    {
+      "claim": "序号就是这条记录在文件里的位置……所以第 n 条记录的序号就是 n，中间不跳号。",
+      "problem": "两处错位。一，seq 是 0 基的事件下标，不是文件行号——文件第 1 行是没有序号的文件头，seq=0 的记录在文件第 2 行；稿子自己在「磁盘上的那个文件」一节才说文件头「没有序号，也不算一条事件」，前面读到这句的人已经被带偏了。二，中文「第 n 条」是 1 基读法，第 1 条记录的序号是 0，不是 1。",
+      "truth": "packages/session/session-persistence-jsonl/README.zh.md 第 17 行给的是 events[i].seq === i。index.ts:629 的 seq: this.log.length 我核过了，行号正确。表述应改为「序号就是这条记录在事件日志里的下标，从 0 开始，中间不跳号」。"
+    },
+    {
+      "claim": "每行四个固定字段。type 是记录类型，time 是时间戳，data 是这条记录自己的内容，seq 是序号。",
+      "problem": "「四个固定字段」会被读成「每行就四个字段」，而稿子引用的这份文件里做不到。",
+      "truth": "我逐行统计了 examples/acp-agent/tests/snapshots/parallel-tool-calls/session.jsonl 的 32 条记录：26 条是 (type, seq, time, data)，2 条多一个 surfaceOp，4 条多 sourceEventSeqs + surfaceOp。types.ts 的 SessionEvent 定义里 ignorable / surfaceOp / sourceEventSeqs 都是可选字段。应写「每行四个必填字段」。"
+    },
+    {
+      "claim": "仓库里存着一百多份真实跑出来的日志，都在测试目录下。",
+      "problem": "两处不准。一，不是全在测试目录：find . -name session.jsonl 得 114 份，其中 113 份在 /tests/ 下，剩下 1 份是 ./scripts/snapshots/python-sdk-single-exe/advanced/session.jsonl。二，「真实跑出来的」不成立：一部分 fixture 是人工编写或机械派生的。",
+      "truth": "examples/acp-agent/tests/acp.snapshot.ts 第 139-142 行注释：product-subagent 场景是 authored schema-isolation fixtures，复用 text-turn 的 transcript，record 模式明确不许用实时 API 输出替换；第 168-170 行注释：packed-chunks 是 Authored from the real PACKED_CHUNKS_SOURCE recording。改成「一百多份跑出来的日志，绝大多数在测试目录下」即可。"
+    },
+    {
+      "claim": "所以连续 3 条或更多的同类片段会被打包成一行",
+      "problem": "「同类」丢了两个限定，会让读者以为 block-start、usage、finish 这些也会被打包。",
+      "truth": "packages/session/session-persistence-jsonl/README.zh.md 第 17-18 行：「一行保存至少 3 个连续同 block assistant/chunk delta 事件」。chunk-rows.ts 第 5 行同：each run of consecutive same-block delta chunks。MIN_RUN = 3 在第 77 行，判定 run.length >= MIN_RUN 在第 197 行，这两处作者说对了。应写「同一个块里连续 3 条或更多的增量片段」。"
+    },
+    {
+      "claim": "它挂在 llm/stream 上，也就是请求真正交给模型适配器之前的最后一道关口。挂的时候带了 prepend: true",
+      "problem": "「最后一道关口」没有来源，而且和紧接着的下一句自相矛盾：prepend: true 的作用恰恰是把这个监听器排到 waterfall 链的最前面。同一段里既说「最后一道关口」又说「不排在最前面的话……根本轮不到执行」，读者会绕不出来。",
+      "truth": "invariant.ts 第 54 行注册选项是 { global: true, prepend: true }，第 20 行注释：Prepend prevents a short-circuiting replay listener from silencing the check。llm/stream 是请求的分发事件，适配器本身也是它的监听器之一。「最后一道关口」这半句删掉。"
+    },
+    {
+      "claim": "于是不用 API 密钥、不花钱、不联网，也能把整套软件真的跑起来——工具、循环、审批、界面全是真的，只有模型那一端是录音。",
+      "problem": "「审批……全是真的」没有来源，而且被稿子自己引用的那份 fixture 反证了。",
+      "truth": "稿子引的 parallel-tool-calls/session.jsonl 序号 5 的正文里写着：Approval prompts are disabled in this session: actions that require approval are rejected automatically。这份录音跑的时候审批是关的。llm-replay 的 README 也没有任何一句支持「审批是真的」。把「审批」从这个列表里去掉。"
+    },
+    {
+      "claim": "不带哈希后缀，为的是多个项目共用一个存储根时能一眼认出是哪个项目。",
+      "problem": "把笔记里两个不同段落的内容用「为的是」连成了因果。原文给「不带哈希后缀」的理由是可读性约定，「集中存储也认得出」是另一段讲整体布局的话。",
+      "truth": ".agents/notes/implemented/architecture/2026-07-24-project-session-directories.zh.md 第 26 行：「项目键有意不带哈希后缀。这遵循 coding agent 常用的易读约定，使规范化后的项目路径本身就是完整的目录名。」第 30 行才是：「部署选择集中存储时，目录名仍能让项目路径易于辨认。」拆成两句陈述，别用「为的是」。"
+    },
+    {
+      "claim": "测试把回放跑出来的新日志归一化之后，和这份 fixture 原文逐行比。",
+      "problem": "比较的两边都要先处理，不是拿「fixture 原文」去比。",
+      "truth": "packages/test-support/acp-snapshot/src/suite.ts 第 1337-1340 行：harvested 和 fixture 各自先过 scrub()，再各自过 normalizeSessionLog() 之后才 toEqual。改成「两边都归一化之后逐行比」。"
+    },
+    {
+      "claim": "（trace 卡片）第 23、27 行 请求对象和它的消息数组必须是冻结的",
+      "problem": "行号指法和同一个卡片里的其他行不一致，读者点过去会对不上。其他四条指的都是 fail() 或判断所在的行，这一条第二个数字指的是 if 的开头，真正的 fail() 在下一行。",
+      "truth": "invariant.ts 第 27 行是 if (!Object.isFrozen(options.messages)) {，fail 在第 28 行。同一份文件里 8 处 fail() 分别在 23、24、26、28、33、37、41、51 行——「八处检查」这个数字我数过，是对的。这条改成「第 23、28 行」。"
+    }
+  ],
+  "ruleViolations": [
+    {
+      "rule": "第 14 条（讲东西，别讲这篇文章）",
+      "quote": "抽出其中几行，原文照抄：",
+      "fix": "整句删掉，代码块直接接在上一段后面。这句话给的是关于文章排版的信息，不是关于日志的信息。"
+    },
+    {
+      "rule": "第 14 条（讲东西，别讲这篇文章）",
+      "quote": "挑一份短的：<code>examples/acp-agent/tests/snapshots/parallel-tool-calls/session.jsonl</code>。",
+      "fix": "改成「其中最短的一份是 <code>examples/…/session.jsonl</code>。」——同时解决第 1、2 条（「挑」的主语是作者）和第 5 条（孤立短句加冒号）。"
+    },
+    {
+      "rule": "第 14 条（讲东西，别讲这篇文章）",
+      "quote": "中间那些没抽出来的序号，装的是这一轮的全部细节。",
+      "fix": "删。「没抽出来」说的是这篇文章抽了什么，不是日志里有什么；而且下面的表格马上就逐条列了，这句纯占位。"
+    },
+    {
+      "rule": "第 4 条（拟人化）",
+      "quote": "和用户真正敲的那句话（序号 4）并排放着。",
+      "fix": "「放着」是躺在/趴在同一类。改「紧挨在用户真正敲的那句话（序号 4）后面」。"
+    },
+    {
+      "rule": "第 4 条（拟人化）",
+      "quote": "反过来默认跳过的代价是悄无声息地恢复出一个被掏空的会话。",
+      "fix": "「悄无声息地」是悄悄地/默默地同一类。改「反过来默认跳过，会不报任何错就恢复出一个被掏空的会话」。"
+    },
+    {
+      "rule": "第 4 条（拟人化）+ 段末总结金句",
+      "quote": "账还没记就想发请求，不行。",
+      "fix": "「想发请求」把意愿安给了请求，「不行」是替读者下结论的收尾。改「日志里还没有这两条记录，检查就不通过」。"
+    },
+    {
+      "rule": "段末总结金句",
+      "quote": "它不知道自己是个分叉。",
+      "fix": "删。上一句「模型看到的消息列表和父会话在那一刻的一模一样」已经把事实说完了，这句只是把结论再漂亮地说一遍。"
+    },
+    {
+      "rule": "段末总结金句（开头版）+ 事实纪律第 3 条（写不出来源的句子删掉）",
+      "quote": "一本账可不可信，取决于记录是在动作之前落盘还是之后。",
+      "fix": "这是作者自己发明的格言，仓库里没有对应的话。直接从事实开讲：「<code>dsh-session-checkpoint-policy</code> 这个插件管的是落盘和动作的先后顺序。」"
+    },
+    {
+      "rule": "段末总结金句",
+      "quote": "所以话说得很重，把判断权交回给模型，并且明说不要盲目重试。",
+      "fix": "「话说得很重」是作者对措辞的评价。原文已经整段引在上面了，读者自己能看出重不重。改成「所以这段话把判断权交回给模型，并且明说不要盲目重试」。"
+    },
+    {
+      "rule": "第 10 条（一段最多欠一个新词）",
+      "quote": "它挂在 <code>llm/stream</code> 上……挂的时候带了 <code>prepend: true</code>，第 20 行的注释写明了原因——不排在最前面的话，一个会提前截断链条的监听器（比如一个只负责放录音的假适配器）会让这道检查根本轮不到执行。",
+      "fix": "一段里塞进 llm/stream、prepend、监听器、链条、提前截断五个没解释的东西。先用大白话把机制说清楚：「一个请求发出去之前，会依次经过一串监听它的插件。这道检查被排在这串的最前面（<code>prepend: true</code>），第 20 行注释写明了原因：排在后面的话，一个中途就把链条掐断的插件（比如只负责放录音的假适配器）会让它根本轮不到执行。」"
+    },
+    {
+      "rule": "第 10 条 / 第 13 条（未解释的直译术语）",
+      "quote": "逐项和日志里折叠出来的 <code>request/header</code> 比。",
+      "fix": "「折叠」是 foldRequestHeader 的直译，全文没解释过。改「逐项和日志里那条 <code>request/header</code> 记下的值比」。"
+    },
+    {
+      "rule": "第 11 条（harness 与 DeepSeek Harness）",
+      "quote": "比本构建新，提示升级 harness 后再打开",
+      "fix": "小写裸 harness 在这里指的是这一个产品。改「提示升级 DeepSeek Harness 后再打开」。下面中文译文里的「这次工具调用在 Harness 记下它已开始之前就中断了」同理，可在括号里补一句这是模型看到的原话直译。"
+    },
+    {
+      "rule": "第 12 条（我自己挖到的，读者要它干嘛）",
+      "quote": "整个仓库也没有任何一份 YAML 配置挂了它。",
+      "fix": "这是作者的 grep 结果，读者拿不到任何收益，而且支撑的是一个错误结论（见事实错误第 1 条）。连同后面那句一起删或改写。"
+    },
+    {
+      "rule": "第 12 条（我自己挖到的，读者要它干嘛）",
+      "quote": "这个错误带一个固定错误码 <code>INVARIANT</code>，并且带上是哪个包违的规。",
+      "fix": "读者不会去 catch 这个错误码。删，或者只留「错误信息里会写明是哪个包违的规」——那还算能让读者理解归属设计。"
+    },
+    {
+      "rule": "第 12 条（我自己挖到的，读者要它干嘛）",
+      "quote": "并发的多个工具调用共用会话存储那条串行的落盘队列，不会产生重复的序号。",
+      "fix": "删。读者读完既不知道不这么做会怎样，也用不上这条。"
+    },
+    {
+      "rule": "第 12 条（我自己挖到的，读者要它干嘛）",
+      "quote": "配置里把 <code>compression</code> 设成 <code>'none'</code> 就保留纯文本 <code>.jsonl</code>，但一个存储根只能属于一种编码，混着放会被拒绝。",
+      "fix": "第 13 篇不是实操篇，读者不会去改这个配置。删后半句，前半句压缩成「关掉压缩就是纯文本 <code>.jsonl</code>」。"
+    },
+    {
+      "rule": "第 13 条（不解释读者本来就会的事）",
+      "quote": "<code>type</code> 是记录类型，<code>time</code> 是时间戳",
+      "fix": "上面代码块里就明摆着，字段名自己在说话。删这两项，只留 data 和 seq 的说明——seq 那句才是真信息。"
+    },
+    {
+      "rule": "第 7 条（不是 X，是 Y）",
+      "quote": "它是开发和测试时用的，不进普通安装。",
+      "fix": "句式和事实双重问题（见事实错误第 1 条）。整句删。"
+    },
+    {
+      "rule": "第 1、2 条（主语是事物，不编第一人称）",
+      "quote": "效果可以数出来。",
+      "fix": "「可以数出来」暗含一个在数的人。改「这份日志上打包省下的行数是这样」，或者直接删掉，让数据卡片说话。"
+    }
+  ],
+  "emptyParagraphs": [
+    "「这条规矩约束的是插件作者。DeepSeek Harness 里一切都是插件，模型适配器、工具、日志本身都是。一个插件想往模型的视野里塞点东西，不能直接塞进请求，得先往日志里追加一条记录，请求再从日志里算出来。」——上一段的译文已经说完了同一件事（「所以要给模型加一样新的可见输入，就得加一种新的会话事件——扩展 SessionEventMap，再从日志渲染出来」）。读者在这一段唯一多知道的是「一切都是插件」，而那是第 10 篇的题目。整段删，把「一切都是插件」并进上一段。",
+    "「上面这份日志跑完只有一轮，两步。中间那些没抽出来的序号，装的是这一轮的全部细节。」——第一句紧接着就被下面的 32 行表格逐条讲清楚了；第二句零信息。整段可以并到 turn/step 那句定义后面，只保留「这份日志一共一轮两步」。",
+    "「八处检查，任何一处不过，fail() 抛出 InvariantError，请求发不出去。这个错误带一个固定错误码 INVARIANT，并且带上是哪个包违的规。」——第一句有用（八处、发不出去），第二句读者读完多知道的只有一个字符串常量。",
+    "「并发的多个工具调用共用会话存储那条串行的落盘队列，不会产生重复的序号。」——读者读完答不出「这解决了什么问题」，也答不出「不这么做会怎样」。这是仓库 README 第 23 行的实现细节，不是读者的收益点。",
+    "「打包只是写入侧的开关，读取侧不受影响：打包的、没打包的、混着的，加载出来完全一样。」——读者本来也没担心过读不出来。前面「效果可以数出来」那张卡片已经把打包讲透了，这句只是把 README 的一行搬过来。",
+    "「版本号目前是 0……后端读到别的版本直接拒绝，没有迁移路径。报错时会说清方向：比本构建新，提示升级 harness 后再打开；比本构建旧，说明本构建没有升级路径。」——「没有迁移路径」在同一段里说了两遍；而且版本号只存在过 0 这一个值，「比本构建旧」这半句在现实里不可能发生，读者读完不会多知道任何东西。砍成一句：版本号是 0，读到别的版本直接拒绝，报错里会说清是该升级还是这个构建读不了。",
+    "全篇最后一段「下载端点会在读取前先把活着的根会话刷一遍盘。于是用斜杠命令导出时，ZIP 里会包含启动这次下载的那一对 command/run 和 command/done 记录。」——一整篇讲「每一步都记账」的文章，收尾停在一条谁也用不上的自指趣闻上。这条细节要么删，要么挪到中间当「先记账再动手」那一节的一个例子（导出这个动作本身也被记了账），别当结尾。"
+  ]
+}

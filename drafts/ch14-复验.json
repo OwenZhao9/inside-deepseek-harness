@@ -1,0 +1,9 @@
+{
+  "no": "14",
+  "verdict": "仍需修",
+  "unfixed": [],
+  "newProblems": [
+    "新写的一句「四套预设里再没有第二处规定这件工具用法的文字」不成立。grep 四套预设，ask_user_question 一共出现 6 次：standard 第 120、124 行，code 第 127、131 行，cordis 第 108、112 行，minimal 无。第 124/131/112 行那句「Do not paste the final plan as a plain reply or ask \"should I proceed?\" through prose or ask_user_question」也是一条明确的用法规定（不许拿它问「我可以开始了吗」），跟稿子引的第 120 行不是同一句。这一句是修订时新加的，原稿没有。好在这些第二处也都落在同一段 plan-mode section 里，所以后半句「普通会话里模型读不到这条限制」仍然成立——改法是把范围收到那段之外，例如「这段之外，四套预设里再没有第二处」，或者干脆把第 124 行那条也写出来。",
+    "数据卡标题被改成「几件工具一次最多返回多少（都是配置项的默认值）」之后，卡里的 10 MB 那一行跟标题对不上——它不是一次返回多少。packages/fs/tool-fs/src/read.ts 第 22 行 STREAM_MIN_SIZE 的注释原文是「Default streaming threshold (the readStreamMinSize config): files at or above this size stream; smaller files read whole into memory」，管的是读文件时装不装进内存，跟输出量无关。这正是报告点名 terminal_read 的 500、schedule_create 的 300 秒时用的那条标准，那两行拿出去了，10 MB 这行留下了。要么把它跟另外两个数字一起挪到卡片后面单说，要么把标题放宽回「几件工具说明书里印着的数字」。"
+  ]
+}

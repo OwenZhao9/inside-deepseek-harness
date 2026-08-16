@@ -1,0 +1,9 @@
+{
+  "no": "13",
+  "verdict": "仍需修",
+  "unfixed": [],
+  "newProblems": [
+    "「请求发出前，拿日志重算一遍对答案」一节新写的句子「会依次经过一串挂在 llm/stream 上的插件，模型适配器本身也是其中一个」不成立。模型适配器不是 llm/stream 的监听器，而是这条 waterfall 的终点续延：packages/llm/llm/src/index.ts 第 921-926 行 this.ctx.waterfall(this, 'llm/stream', options, () => this.adapterStream(options, prepared))，适配器走的是 ctx.llm.registerAdapter 注册，不是 ctx.on('llm/stream')；docs/subsystems/llm-streaming.md 第 629 行原话是 Adapter lookup happens at the terminal continuation of the llm/stream waterfall；docs/event-producer-consumer.md 第 39 行列的 llm/stream 消费者只有 agent-loop、llm、llm-replay、session-checkpoint-policy、session-title，没有任何供应商适配器（真正挂在 llm/stream 上的「假适配器」只有回放插件，packages/test-support/llm-replay/src/index.ts 第 751 行，所以括号里那半句是对的）。改法：删掉「模型适配器本身也是其中一个」，或改成「这一串跑完，请求才交给模型适配器」。原挑错报告的 truth 里那句「适配器本身也是它的监听器之一」本身就是错的，修订者照抄了它。",
+    "次要、同一段：把 factErrors 1 的结论换成「packages/runtime-diagnostics/invariants/README.zh.md 第 69 行写着，标准 agent 组合会挂上这个服务和 4 个核心配套检查」，对第 69 行的转述准确，但它紧跟在「八处检查」和「这套检查……得挂上才生效」之后，读者会读成这八处 agent-loop 检查在标准组合里是开着的。同一份 README 第 64 行的组合示例恰好把 package_blocklist 设成 ['^@deepseek-ai/dsh-agent-loop$']，即显式排除了本节讲的这套检查。建议把主语说死（挂上的是 ctx.invariants 服务和另外 4 个核心配套检查），别让「这套检查」和「标准组合会挂」连读。"
+  ]
+}

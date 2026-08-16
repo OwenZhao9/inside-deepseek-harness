@@ -1,0 +1,10 @@
+# 别人的仓库，只是本地克隆来读源码，不进版本库
+oc-repo/
+dsh-repo/
+
+# 中间产物
+book-final.html
+书稿-打包.html
+
+# 系统
+.DS_Store

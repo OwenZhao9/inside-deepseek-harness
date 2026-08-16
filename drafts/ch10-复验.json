@@ -1,0 +1,10 @@
+{
+  "no": "10",
+  "verdict": "仍需修",
+  "unfixed": [],
+  "newProblems": [
+    "新引入的事实错（第 18 条本地改动那一段）：「Windows 上 base 那一行把 tool-bash 关掉了，可随发行版交付的预设自己也各挂一行 tool-bash」——出事的时候 base 那一行并没有这个门控。设计记录 /Users/USER/askAnything/harness-0to1/dsh-repo/.agents/notes/implemented/architecture/2026-08-11-loader-entry-disabled-interpolation.zh.md 第 9 行原话是「Windows 平台层（当时是 base patch 旁独立的 windows.cordis.patch.yml，现已折入 base 行——见「决策」）在 win32 上禁用 tool-bash」，第 15 行写明那个独立平台层（连同 apps/cli/src/windows-shell.ts）是这次改动之后才被删掉、条件才落到 base 自己那一行上的（该文件现在仓库里已不存在，find 无结果）。稿子把「改完之后」的状态写成了「改之前」的起因。更要命的是它跟紧接着的下一句自相矛盾：既然「条件写不进条目元数据」，base 那一行当时就不可能带 !!js 门控——读者读到这里会直接卡住。改法：那一句应写成「Windows 上另有一层启动器注入的平台补丁把 tool-bash 关掉」，并说明这次改动同时把这层补丁删掉、条件挪回 base 自己那一行。",
+    "新引入的事实错（trace 第 5 层）：「前四层都是磁盘上的文件，这一层写在启动那条命令里。」——--patch 收的是一个文件路径，不是命令行里的内联配置，第 5 层同样是磁盘上的 YAML 文件。证据：/Users/USER/askAnything/harness-0to1/dsh-repo/packages/boot/app-boot/src/index.ts:291 注释「a `--patch <path>` overlay」；docs/user/develop/basic/publish.zh.md:119「每个 --patch <path> overlay，按 argv 顺序」；docs/user/develop/basic/tool.zh.md:43 的实例 `pnpm dsh web --patch ./scratch-plugin/cordis.yml`。顺带：可以叠多份（按 argv 顺序），不是「一份」。原稿这一层只是空，改完变成错。改法：「启动时用 --patch 现指一份文件叠上去，可以指多份，按命令行里的先后排在所有层最上面；前四层的位置是固定的，这一层临时指到哪份就是哪份。」",
+    "报告点名的「预设首次出现无说明」这条，修订后又在新位置复发：新增的定义段落排在「补丁打在一张空清单上」之后，但「预设」第一次出现是在更靠前的「装不装，写在这一行自己身上」一节新写的那句「可随发行版交付的预设自己也各挂一行 tool-bash，预设层最后组合」，那里一个字的说明都没有。要么把定义提到那一句旁边，要么那一句先用大白话（「每个会话另挂的那套预先配好的组合」）。"
+  ]
+}

@@ -1,0 +1,136 @@
+<article class="chapter">
+  <div class="rail"><span class="no">16</span><span class="t">设计笔记</span></div>
+  <h2>683 篇笔记</h2>
+
+  <p>DeepSeek Harness 的仓库里有一条硬性要求：每一次不算琐碎的改动，都要在同一次改动里新增或更新至少一份文档。什么算「不算琐碎」，<code>.agents/notes/README.zh.md</code> 第 48 行列了一串：改了行为、架构、跨文件或跨包的约定、流程或工具、测试策略、磁盘存储格式、协议格式或配置格式，末尾还留了一条兜底的——「或者维护者可能合理重新审视的其他决策」。封闭的是另一头：能豁免的只有一种情形，「不涉及行为、约定、结构、流程或理由变化的纯机械性或局部编辑」（第 50 行）。这类文档在仓库里叫 Agent Note，中文版保留了英文名，中文里可以叫它<strong>设计笔记</strong>。</p>
+
+  <p>它要装什么，同一份 README 第 5 行写了：影响这个代码库的决策或提案，「代码和文档无法承载的<em>为什么</em>以及<em>放弃了什么</em>」。代码呈现的是最后选中的那一版，文档解释的是这一版怎么用；被否掉的那几版不在里面。</p>
+
+  <p><code>.agents/notes/</code> 目录下有 683 篇。每篇占三个文件：一份英文正文、一份中文正文、一份记录两侧内容哈希的伴随文件——哈希用来发现一侧改了、另一侧没跟上。683 × 3 = 2049 个文件，加上五份说明文档、一份给 README 用的哈希伴随文件和一份归档清单，整个目录共 2056 个文件。</p>
+
+  <div class="data">
+    <div class="lbl">683 篇正文加起来</div>
+    <div class="rows">
+      <div class="row"><span class="k">英文总行数</span><span class="v">37,516 行</span></div>
+      <div class="row"><span class="k">英文总词数</span><span class="v">696,781 词</span></div>
+      <div class="row"><span class="k">英文平均每篇</span><span class="v">54.9 行</span></div>
+      <div class="row"><span class="k">最长一篇</span><span class="v">529 行（<code>implemented/architecture/2026-08-02-typert-remote-method-calls.md</code>）</span></div>
+      <div class="row"><span class="k">最短</span><span class="v">23 行，三篇并列</span></div>
+      <div class="row"><span class="k">中文总字符数</span><span class="v">2,448,439</span></div>
+    </div>
+  </div>
+
+  <p>文件名上的日期是这个题目第一次被提出来的时间，以 git 历史为准（README 第 17 行）。683 个日期落在 2026-06-11 到 2026-08-13 之间，这 64 天里有 58 天出现过至少一篇。最密的一天是 2026-07-30，47 篇；其次是 2026-07-31 的 33 篇和 2026-07-27 的 30 篇。光这三天就是 110 篇，占 683 篇的 16%。最早那天有 18 篇，最晚那天有 7 篇。</p>
+
+  <h3>一份笔记的地址就是它的元数据</h3>
+
+  <p>路径规定成 <code>{生命周期}/{类别}/yyyy-mm-dd-题目.md</code>（README 第 9 行）。一份真实的路径长这样：</p>
+
+<pre><code>.agents/notes/rejected/simplification/2026-07-26-dependency-swaps-rejected-by-nih-audit.md</code></pre>
+
+  <p>拆开是四段信息。<code>rejected</code>——这份提案被否了。<code>simplification</code>——它属于「在不增加能力的前提下移除代码、行为或对外范围」这一类。<code>2026-07-26</code>——题目第一次提出的日期。剩下的是题目本身。一份笔记从提案变成实施，要在同一次改动里做三件事：把文件搬进另一个文件夹、改掉文件里的状态行、按目标文件夹的骨架改写正文——<code>## Proposal</code> 改写成现在时的 <code>## Decision</code>，<code>## Acceptance criteria</code> 和 <code>## Risks</code> 折进 <code>## Consequences</code>。三件事缺一件，门禁就失败（README 第 125 行）。</p>
+
+  <p>没有目录页，而且是明令禁止的。README 第 19 行写着「请勿添加集中式 <code>INDEX.md</code>」，<code>scripts/agent-note-tree.ts</code> 第 47–48 行把根目录下出现 <code>INDEX.md</code> 当结构错误报出来。理由记在 <code>implemented/process/2026-07-19-remove-generated-agent-note-index.md</code> 第 9 行：索引重复的是每份笔记的路径、文件名日期和标题里已经有的信息，而任何一个分支只要新增、移动或改名一份笔记，都要改同一个生成文件，那个文件因此成了可预测的冲突热点。第 31 行也记了代价：读者失去一个按时间排的总览页，改用目录树和全仓搜索。</p>
+
+  <h3>四个文件夹，三种状态值</h3>
+
+  <p>活跃的三个文件夹是 <code>proposed/</code>（提案，还没做或只做了一部分）、<code>implemented/</code>（决策已交付）、<code>rejected/</code>（讨论过被否）。第四个是 <code>archived/</code>，只收已实施的笔记，进去之后永久冻结。</p>
+
+  <div class="data">
+    <div class="lbl">683 篇的去向</div>
+    <div class="rows">
+      <div class="row"><span class="k">implemented 已实施</span><span class="v">505 篇</span></div>
+      <div class="row"><span class="k">archived 已封存</span><span class="v">142 篇</span></div>
+      <div class="row"><span class="k">proposed 提案中</span><span class="v">25 篇</span></div>
+      <div class="row"><span class="k">rejected 被否</span><span class="v">11 篇</span></div>
+    </div>
+  </div>
+
+  <p>文件夹有四个，状态行只有三种写法（README 第 72–76 行）：<code>Status: proposed</code>、<code>Status: implemented</code>、<code>Status: rejected — 一行原因</code>。归档的笔记不换状态值，它保留 <code>Status: implemented</code>，在下面插一行 <code>Archived: YYYY-MM-DD</code>（README 第 42 行）。</p>
+
+  <p>三种状态里只有被否的那一种要求带上内容。README 第 78 行给了理由：读者去翻一份被否决的笔记时，结论正是他要找的东西。</p>
+
+  <h3>六个类别是封死的</h3>
+
+  <p><code>scripts/agent-note-tree.ts</code> 第 19 行把六个词写成一个常量数组，第 71–72 行对任何不在数组里的文件夹直接报错。要加一个新类别，得同时改这个数组和 README 的分类小节（README 第 25 行）。</p>
+
+  <div class="data">
+    <div class="lbl">六个类别的覆盖范围与篇数（README 第 29–34 行）</div>
+    <div class="rows">
+      <div class="row"><span class="k">feature 面向用户或模型的新能力</span><span class="v">229 篇</span></div>
+      <div class="row"><span class="k">architecture 交付源码的结构性决策</span><span class="v">153 篇</span></div>
+      <div class="row"><span class="k">bug-fix 修缺陷、补事故复盘发现的缺口</span><span class="v">96 篇</span></div>
+      <div class="row"><span class="k">process 源码周边的工具、策略、工作流</span><span class="v">96 篇</span></div>
+      <div class="row"><span class="k">simplification 不增加能力地移除东西</span><span class="v">87 篇</span></div>
+      <div class="row"><span class="k">testing 测试基础设施与策略</span><span class="v">22 篇</span></div>
+    </div>
+  </div>
+
+  <p>architecture 和 process 的界线，README 第 36 行划得很直接：architecture 关乎交付出去的源码，process 关乎围绕源码的工具与工作流。同一行还记了一个被排除的类别——<code>refactor</code>，理由是它和 simplification 重叠，而 simplification 的判别标准「可观察行为是否改变」已经覆盖了它。</p>
+
+  <p>六个类别在四个文件夹里的分布不对称。bug-fix 的 96 篇全部在 <code>implemented/</code>（77 篇）和 <code>archived/</code>（19 篇），<code>proposed/</code> 和 <code>rejected/</code> 下面连 bug-fix 这个文件夹都不存在。<code>rejected/</code> 下面只有两个类别的文件夹：feature 1 篇，simplification 10 篇。</p>
+
+  <h3>前四行是机器检查的</h3>
+
+  <p><code>scripts/verify-agent-note-format.ts</code> 是一个检查脚本，全文 94 行，逐份读 541 篇活跃笔记（归档的不查），任何一条不合就整个失败。</p>
+
+  <div class="trace">
+    <div class="t"><span class="tag">第 55–61 行</span><p>第 1 行必须是 <code># Agent Note: 标题</code>，第 2 行必须空，第 3 行必须是所在文件夹对应的那种状态写法，第 4 行必须空。</p></div>
+    <div class="t"><span class="tag">第 62–65 行</span><p>全文只允许出现这一行 <code>Status:</code>，重复一行就报错。</p></div>
+    <div class="t"><span class="tag">第 68 行</span><p>正文的第一个二级标题必须是 <code>## Problem</code>。README 第 82 行说明了这一节写什么：动机，而且要写得不依赖解决方案也能独立成文。</p></div>
+    <div class="t"><span class="tag">第 29–33 行</span><p>各文件夹另外必须有的章节。提案要有 <code>## Proposal</code>、<code>## Acceptance criteria</code>、<code>## Risks</code>；已实施要有 <code>## Decision</code>、<code>## Consequences</code>；被否的只额外要求 <code>## Proposal</code>。</p></div>
+    <div class="t"><span class="tag">第 36 行</span><p>已实施的笔记里禁止出现 <code>## Proposal</code>、<code>## Plan</code>、<code>## Migration plan</code>、<code>## Acceptance criteria</code>。README 第 107 行把它们归为提案阶段的「规格用语」，要求折进 <code>## Decision</code> 或 <code>## Consequences</code>。</p></div>
+  </div>
+
+  <p>被否的那类是个例外：它是被冻住的提案，提案时有的章节原样保留，包括验收标准和计划，结论只写在状态行上（README 第 111 行）。</p>
+
+  <h3>每篇都得写清楚它击败了什么</h3>
+
+  <p>还有一节所有笔记都必须有，叫 <code>## Alternatives considered</code>（曾考虑的替代方案）：每一个真实存在过的备选方案，加上它落选的原因。README 第 115 行给的理由是一句话——记录决策时不记录它击败了什么，就是在邀请反复争论。</p>
+
+  <p>这一节只开了一个口子。格式规范从 2026-07-05 起生效，早于这天、且备选方案已经无法从记录里重建的笔记，用一行固定注释代替这一节。README 第 117 行把边界写死了：「替代方案是记录下来的，不是凭空编造的。」检查脚本第 82 行拒绝任何日期在 2026-07-05 及之后的文件使用这行注释，事后补也补不上。</p>
+
+  <p>541 篇活跃笔记里，526 篇真写了这一节，15 篇用的是那行注释。</p>
+
+  <h3>半截轮次、十行代码、一个第三方沙箱</h3>
+
+  <p><strong>《加载时截断被中断的最终轮次》</strong>，2026-06-20。这个软件干活是一轮一轮的，一轮里可以有很多步、很多次工具调用和很多输出。干活的过程按发生顺序一行一行写进会话日志——这一步开始了、这个工具被调用了、结果回来了、这一轮结束了——每一行叫一个<strong>事件</strong>。程序崩了，最后一轮的日志往往写了一半没收尾。当时的做法是加载时把这一轮补完：给没等到答复的工具调用合成一个报错结果，补上步骤结束事件，再补一个标着「被中断」的轮次结束事件。这份提案说这套机制太重——协调器、两种存储后端、事件词汇、文档和测试全都要为这条合成路径建模——而且它凭空造出了从未发生过的事件，合成的工具结果会变成模型看得见、却不是任何工具产出的文本（第 9–11 行）。改法是加载时只保留最后一个完整轮次，之后的全部丢掉。</p>
+
+  <p>提案自己在「放弃的内容」一节里承认了代价（第 30 行）：崩溃可能丢掉最终轮次里的助手文本、工具调用和工具输出。否决理由就压在这个代价上：</p>
+
+  <blockquote><p>单个轮次可以包含大量真实工作，包括多个步骤和大量工具输出。保留被中断的轮次，优于在加载时静默丢弃这段尾部。</p></blockquote>
+
+  <p><strong>《用 node:timers/promises 替代手写的可取消休眠》</strong>，2026-07-26。三个包各自手写了一小段「等一会儿再继续」的代码，分别约 14 行、7 行、4 行，而 Node 自带的模块本来就提供同样的能力，仓库里另外三个包已经在用自带的（第 9–13 行）。提案要把这三处换掉。风险一节只有一行（第 37 行），开头是「基本没有风险：不涉及模型可见的输出，没有平台顾虑，也不新增依赖」，后半句留了这一节唯一的保留意见：llm-retry 那处改写会把一个返回真假值的辅助函数变成 try/catch 控制流，算一项局部可读性判断，交给实施时裁量。</p>
+
+  <p>这次是真去做了，做完的那批改动编号 679。状态行随后变成这样（第 3 行）：</p>
+
+  <blockquote><p>实现（PR #679）证伪了行为等价前提：vitest 的假时钟不拦截 <code>node:timers/promises</code>，这次替换用确定性的快速测试换来约 10 行删除，得不偿失。</p></blockquote>
+
+  <p>假时钟是测试里的一个开关：打开之后，代码里写的「等三秒」不用真的等三秒。手写的那三处等待，包的都是全局 <code>setTimeout</code>（第 11–13 行）；换成 Node 内置模块之后，状态行记下的结果是假时钟拦不住它，测试会真的开始等。</p>
+
+  <p><strong>《在构建 Windows 沙箱启动器之前先评估 landstrip》</strong>，2026-07-26。沙箱是限制一段命令能读写哪些文件的那层围栏。它只管文件：<code>implemented/feature/2026-07-06-sandbox.zh.md</code> 第 191 行专门答过「沙箱限制网络吗」，答案是没有任何一种后端声称管网络。这个软件在 Linux 和 macOS 上都有，Windows 那一档是空的，原计划自己写一个约 1,500 行的新仓库来填（第 9 行）。后来公开的包仓库里出现了一个第三方现成方案，三个平台全覆盖，接口形状也对得上（第 11 行）。这份笔记提议：动手之前先评估它。</p>
+
+  <p>连评估都被否了。状态行（第 3 行）写的是：landstrip 未经实战检验（驳回时问世仅数天，只有一名维护者，GitHub 星标约 48 个）；关系到安全不变量的依赖必须经过广泛采用的验证，因此 win32 那一档维持自研启动器的原计划。</p>
+
+  <p>笔记里列了评估本该回答的四个问题（第 17–20 行），其中两个决定了结论。许可证：那些二进制文件采用 LGPL-2.1-or-later，进入随产品一起发布的那堆依赖之前要先做分发审查。源码与构建记录：自研启动器是一个约 300 行、能完整评审的 C 文件，每个二进制都逐字节锁定到一次原生的自动化构建；landstrip 是单一维护者手里的一组 Rust 二进制文件。同一份笔记还直接否掉了一个更省事的想法——把已经在跑的 Linux 那一档也换成 landstrip：沙箱正确性是安全不变量，当前启动器有可完整评审的 C 源码、二进制逐字节锁定到原生构建，而它正是出于这一点才迁移摆脱了 Rust 依赖（第 25 行）。</p>
+
+  <h3>被否掉的东西为什么还留着</h3>
+
+  <p>README 第 14 行给了保留条件：仅当一份被否的笔记的决策依据仍能避免一种诱人且影响重大的错误时保留；否则连英文、中文和伴随文件三个一起删掉。</p>
+
+  <p>最能说明这条标准的是 <code>rejected/simplification/2026-07-26-dependency-swaps-rejected-by-nih-audit.md</code>。2026-07-26 那天仓库做了一次全仓库审查，十路并行，覆盖每个包组、脚本目录、原生代码、随仓库存放的第三方源码副本、Python 部分、测试设施和持续集成，对每一处手写实现问同一个问题：换成一个有人维护的外部包或者 Node 内置模块，能不能净赚（第 9 行）。查出来该换的，各自写成了独立提案。查出来不该换的 38 条，全部压进这一份文件，按协议解析、重试与定时器、数据与校验、文件系统与子进程、服务器与 HTTP、SQLite 与存储、仓库工具分成七组。状态行说明了它为什么存在：</p>
+
+  <blockquote><p>下列每一项替换在证据上都未达到净简化门槛；记录在案，以免这轮普查日后从零重来。</p></blockquote>
+
+  <p>正文第 13 行还加了一道锁：将来任何一项要重新提，必须打败这里记下的具体理由；重新援引一遍那份《优先选用持续维护的依赖，而非手写实现》的政策记录不算数。这份笔记的「曾考虑的替代方案」里，第一个被否掉的方案就是「什么都不记，让改动说明去承载这些结论」，理由是改动说明不属于被维护的记录（第 76 行）。</p>
+
+  <p>这 38 条各自带着自己的证据。<code>shell-quote</code>：仓库里是两个各一行的引号处理函数，配着穷尽测试；候选包处于维护模式、有过安全漏洞记录，转义输出也不一致——第 46 行的判断是，安全边界不是省下一行代码的地方。<code>fast-deep-equal</code> 和 <code>safe-stable-stringify</code>：两处替换在机械层面都成立，但各自要拿约 17–20 行有注释、有测试的代码，去换一个核心包的第一个外部运行时依赖，这个规模上净值为负（第 35 行）。</p>
+
+  <h3>142 篇被封存</h3>
+
+  <p>已实施的笔记不会永远留在活跃目录里。归档的判据（README 第 40 行）是两条同时成立：交付的决策已经完整落地，而且它的决策依据不太可能再指导未来的工作。反过来，只要里面的备选方案、「什么条件下可以重新引入」，以及归属边界、协议语义、安全规则这几类技术约定还有价值，就继续留着。同一行还排除了三种判据：不按字数，不按存续时间，不按目标配额。提案永远不归档——过时的提案该转成被否。</p>
+
+  <p>归档动作本身只允许做四件事（<code>archived/AGENTS.md</code> 第 5 行）：把英文、中文、伴随文件三个整组搬过去；在两份正文的状态行下面插入同一行 <code>Archived:</code> 日期；重新记录伴随文件；修复或删除指向它的链接。除此之外一个字都不许改。</p>
+
+  <p>搬完就冻结。<code>archived/manifest.json</code> 里存着 426 条 sha256 哈希，正好是 142 篇 × 3 个文件。任何一个封存件被改动、丢失，或者三件套不齐，<code>scripts/verify-archived-agent-notes.ts</code> 会拒绝。<code>archived/AGENTS.md</code> 第 3 行还加了一条给读者的限制：归档件是冻结的历史快照，不得当作当前行为的权威依据。</p>
+</article>

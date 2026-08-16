@@ -1,0 +1,197 @@
+<article class="chapter">
+  <div class="rail"><span class="no">13</span><span class="t">事件日志</span></div>
+  <h2>每一步都记账</h2>
+
+  <p>DeepSeek Harness 跑完一次对话，磁盘上多出来一个文件。文件里一行一条记录，只往后加，写过的行从不改动。用户敲的每一句话、模型吐出的每一个字、每一次工具调用和它的返回、每一次审批、每一次重试，都按发生顺序排在里面。</p>
+
+  <p>模型自己什么都记不住（第 2 篇说的，它是无状态的，每次请求都得把整段对话重新发一遍）。下一次请求要发过去的那一大段内容，就是从这个文件现算出来的。这个文件叫<strong>会话事件日志</strong>。</p>
+
+  <h3>一行一条记录</h3>
+
+  <p>仓库里存着一百多份真实跑出来的日志，都在测试目录下。挑一份短的：<code>examples/acp-agent/tests/snapshots/parallel-tool-calls/session.jsonl</code>。内容是一次对话，用户让模型在同一条回复里读两个文件然后回一句话，模型照做了。整个文件 33 行——第 1 行是文件头，剩下 32 行是事件，序号从 0 排到 31。</p>
+
+  <p>抽出其中几行，原文照抄：</p>
+
+<pre><code>{"type":"turn/start","seq":1,"time":1785821366930,"data":{"turn":1}}
+{"type":"step/start","seq":3,"time":0,"data":{"turn":1,"step":1}}
+{"type":"tool/call","seq":18,"time":1785498766514,"data":{"turn":1,"step":1,"callId":"call_read_a","name":"read","arguments":"{\"file_path\":\"a.txt\"}"}}
+{"type":"tool/call","seq":19,"time":1785730419900,"data":{"turn":1,"step":1,"callId":"call_read_b","name":"read","arguments":"{\"file_path\":\"b.txt\"}"}}
+{"type":"step/end","seq":22,"time":1785730419909,"data":{"turn":1,"step":1}}
+{"type":"step/start","seq":23,"time":1785730419918,"data":{"turn":1,"step":2}}
+{"type":"turn/end","seq":31,"time":1785730419922,"data":{"turn":1,"reason":{"kind":"completed"}}}</code></pre>
+
+  <p>每行四个固定字段。<code>type</code> 是记录类型，<code>time</code> 是时间戳，<code>data</code> 是这条记录自己的内容，<code>seq</code> 是序号。序号就是这条记录在文件里的位置——<code>packages/core/session/src/index.ts</code> 第 629 行写着 <code>seq: this.log.length</code>，新记录的序号直接取当前已有多少条。所以第 <em>n</em> 条记录的序号就是 <em>n</em>，中间不跳号。</p>
+
+  <p><code>turn</code>（一轮）和 <code>step</code>（一步）这两个词第 3 篇讲过：一步是一次模型请求加上它要求执行的那些工具，一轮是从接到输入到没有事情欠着为止的零到多步。上面这份日志跑完只有一轮，两步。中间那些没抽出来的序号，装的是这一轮的全部细节。</p>
+
+  <div class="data">
+    <div class="lbl">一次完整对话在账本上的样子（32 条记录）</div>
+    <div class="rows">
+      <div class="row"><span class="k">0</span><span class="v">agent/inbox/spliced — 用户那句话进了收件箱</span></div>
+      <div class="row"><span class="k">1</span><span class="v">turn/start — 第 1 轮开始</span></div>
+      <div class="row"><span class="k">2</span><span class="v">agent/inbox/spliced — 这句话从收件箱取走</span></div>
+      <div class="row"><span class="k">3</span><span class="v">step/start — 第 1 轮第 1 步</span></div>
+      <div class="row"><span class="k">4</span><span class="v">user/message — 用户那句话进入模型可见的对话</span></div>
+      <div class="row"><span class="k">5</span><span class="v">user/message — 一条注入的运行时上下文快照</span></div>
+      <div class="row"><span class="k">6</span><span class="v">session/title — 给这次会话起的标题</span></div>
+      <div class="row"><span class="k">7</span><span class="v">request/header — 这次请求的整个信封：模型名、系统提示词、工具清单</span></div>
+      <div class="row"><span class="k">8</span><span class="v">request/context — 路由信息（哪个供应商、哪个模型）</span></div>
+      <div class="row"><span class="k">9–16</span><span class="v">assistant/chunk × 8 — 模型流式吐出的片段</span></div>
+      <div class="row"><span class="k">17</span><span class="v">assistant/message — 片段拼成的整条回复（内容是两次工具调用）</span></div>
+      <div class="row"><span class="k">18–19</span><span class="v">tool/call × 2 — 两次 read 调用各记一条</span></div>
+      <div class="row"><span class="k">20–21</span><span class="v">tool/result × 2 — 两次调用的返回各记一条</span></div>
+      <div class="row"><span class="k">22</span><span class="v">step/end — 第 1 步结束</span></div>
+      <div class="row"><span class="k">23</span><span class="v">step/start — 第 1 轮第 2 步</span></div>
+      <div class="row"><span class="k">24–28</span><span class="v">assistant/chunk × 5 — 模型再次流式吐字</span></div>
+      <div class="row"><span class="k">29</span><span class="v">assistant/message — 拼成的整条回复，正文是 DONE</span></div>
+      <div class="row"><span class="k">30</span><span class="v">step/end — 第 2 步结束</span></div>
+      <div class="row"><span class="k">31</span><span class="v">turn/end — 第 1 轮结束，理由 completed</span></div>
+    </div>
+  </div>
+
+  <p>模型流式吐出的每一个片段都单独占一条记录，13 条片段里包括块开始、块结束、用量统计和结束原因。同一件事因此在文件里存了两遍：一遍是逐片段的原始流（序号 9 到 16），一遍是拼装好的整条消息（序号 17）。拼装好的那条用来重建发给模型的对话历史，原始片段保证回放和界面的还原精度——<code>docs/architecture.md</code> 第 94 行原话是 raw <code>assistant/chunk</code> events preserve replay and UI fidelity。</p>
+
+  <p>这份日志允许出现的记录类型是一份写死的清单。<code>packages/core/session/src/known-event-types.ts</code> 里列了 <strong>44 种</strong>，从 <code>turn/start</code>、<code>tool/call</code> 这种主干，到 <code>approval/asked</code>（问了用户要不要批准）、<code>hook/invoked</code>（触发了一个钩子）、<code>llm/retry</code>（请求失败重试了一次）、<code>sandbox/mode</code>（沙箱模式变了）这种边角。这份清单由脚本生成，手改不算数。</p>
+
+  <p>读日志时碰上清单以外的类型，后端拒绝加载整个文件，除非那条记录自己带了 <code>ignorable: true</code> 标记。<code>types.ts</code> 第 413 到 421 行给了理由：一条不认识的记录可能改变后面所有记录的读法，跳过它继续读会重建出一个错的会话。默认要求「必须认识」，忘记打标记的代价是过度拒绝，反过来默认跳过的代价是悄无声息地恢复出一个被掏空的会话。</p>
+
+  <h3>「模型看得见的，必须记下来」</h3>
+
+  <p>这条规矩写在架构文档里。<code>docs/architecture.md</code> 第 96 行，原文一整段：</p>
+
+  <blockquote><p><strong>Model-visible means logged.</strong> Anything that reaches a model request must be reconstructable from the log, and a runtime invariant asserts it. This is why a new model-visible input requires a new session event: extend <code>SessionEventMap</code> and render from the log.</p></blockquote>
+
+  <p>翻过来是：模型看得见就等于要记下来。任何进入模型请求的东西都必须能从日志重建，并且有一条运行时断言核这件事。所以要给模型加一样新的可见输入，就得加一种新的会话事件——扩展 <code>SessionEventMap</code>，再从日志渲染出来。同一条规矩在仓库根目录的 <code>AGENTS.md</code> 第 107 行以约定的形式又写了一遍，那里用的写法是 <code>Model-visible ⟺ logged</code>，双向箭头，当且仅当。</p>
+
+  <p>这条规矩约束的是插件作者。DeepSeek Harness 里一切都是插件，模型适配器、工具、日志本身都是。一个插件想往模型的视野里塞点东西，不能直接塞进请求，得先往日志里追加一条记录，请求再从日志里算出来。</p>
+
+  <p>前面那份日志的序号 5 就是这条规矩的实物。它是一条 <code>user/message</code>，但用户没说过这句话，正文开头是 <code>Current runtime context. This snapshot supersedes earlier runtime-context snapshots.</code>（当前运行时上下文，这份快照取代之前的运行时上下文快照），后面跟着当前的文件策略等等。这是软件自己注入给模型的一段说明。它照样占一个序号，照样在文件里，和用户真正敲的那句话（序号 4）并排放着。</p>
+
+  <p>算消息的时候只认三种记录。<code>packages/core/session/src/surface.ts</code> 第 15 到 19 行列出了会生成模型消息的全部类型：<code>user/message</code>、<code>assistant/message</code>、<code>tool/result</code>。剩下 41 种全是旁注——流式片段、轮次边界、审批记录、会话标题——它们在文件里，但不会变成发给模型的一句话。</p>
+
+  <h3>请求发出前，拿日志重算一遍对答案</h3>
+
+  <p>那条「运行时断言」有具体地址：<code>packages/core/agent-loop/src/invariant.ts</code>，全文 63 行。它挂在 <code>llm/stream</code> 上，也就是请求真正交给模型适配器之前的最后一道关口。挂的时候带了 <code>prepend: true</code>，第 20 行的注释写明了原因——不排在最前面的话，一个会提前截断链条的监听器（比如一个只负责放录音的假适配器）会让这道检查根本轮不到执行。</p>
+
+  <div class="trace">
+    <div class="t"><span class="tag">第 23、27 行</span><p>请求对象和它的消息数组必须是冻结的，交出去之后没人能再改。</p></div>
+    <div class="t"><span class="tag">第 24、26 行</span><p>请求必须带一个会话 id，而且这个 id 在内存里能找到一个活着的会话。</p></div>
+    <div class="t"><span class="tag">第 32、36 行</span><p>那个会话的日志里必须已经有 <code>step/start</code>，也必须已经有 <code>request/header</code>。账还没记就想发请求，不行。</p></div>
+    <div class="t"><span class="tag">第 39–42 行</span><p>拿日志现跑一遍 <code>deriveMessages()</code>，把结果和请求里的消息数组做 JSON 字符串比较。差一个字符就报错，错误信息里的说法是 <code>log-reconstruction desync</code>，日志重建对不上。</p></div>
+    <div class="t"><span class="tag">第 44–52 行</span><p>模型名、系统提示词、temperature、maxTokens、stop、工具清单，逐项和日志里折叠出来的 <code>request/header</code> 比。</p></div>
+  </div>
+
+  <p>八处检查，任何一处不过，<code>fail()</code> 抛出 <code>InvariantError</code>，请求发不出去。这个错误带一个固定错误码 <code>INVARIANT</code>，并且带上是哪个包违的规。</p>
+
+  <p>这套检查是一个单独的服务（<code>ctx.invariants</code>），得挂上才生效。<code>dsh-base</code>、<code>dsh-web-app</code>、<code>dsh-headless</code> 这三个 bundle 的配置文件里都没有列它，整个仓库也没有任何一份 YAML 配置挂了它。它是开发和测试时用的，不进普通安装。</p>
+
+  <h3>先记账，再动手</h3>
+
+  <p>一本账可不可信，取决于记录是在动作之前落盘还是之后。<code>dsh-session-checkpoint-policy</code> 这个插件专管这个顺序。它的 README 第 5 行列了强制落盘的三个时刻：模型适配器收到请求前，顶层工具正文可能产生外部副作用前，以及每一个 <code>agent/pre-step</code> 边界。</p>
+
+  <p>第 21 行说得更具体：它包住 <code>tools/execute</code>，只有在那条 <code>tool/call</code> 记录已经落盘之后，工具的正文才开始跑。如果落盘还没完成时取消就到了，包装层直接返回一个 <code>ABORTED_BEFORE_DISPATCH</code> 的结果，工具正文一步都不进。落盘被拒绝也一样，适配器和工具正文都不运行。并发的多个工具调用共用会话存储那条串行的落盘队列，不会产生重复的序号。</p>
+
+  <h3>崩在半路的那一轮</h3>
+
+  <p>机器断电，日志里会留下一个 <code>turn/start</code> 没有配对的 <code>turn/end</code>。后端重新加载时不会把这一段截掉。<code>docs/subsystems/persistence.zh.md</code> 第 15 行给的理由是：长周期任务里单独一轮可能非常庞大，很多步、很多工具输出，而这些事件在崩溃前已经真实发生并且持久追加过了。</p>
+
+  <p>它改成补齐收尾。<code>packages/core/session/src/repair.ts</code> 按顺序生成三种合成记录：给每一个有调用没结果的工具补一条 <code>tool/result</code>，补一条 <code>step/end</code>，最后补一条 <code>turn/end</code>，理由字段写 <code>interrupted</code>。这是唯一一个不由主循环发出的轮次结束理由。</p>
+
+  <p>补出来的那条工具结果里写了什么，模型是真的会读到的。<code>repair.ts</code> 第 104、105 行是两句写死的英文，按账本上有没有那一笔分成两种。</p>
+
+  <div class="data">
+    <div class="lbl">repair.ts 第 104 行 · 调用记下了，结果没记下</div>
+    <div class="rows">
+      <div class="row"><span class="k">错误码</span><span class="v">TOOL_OUTCOME_UNKNOWN</span></div>
+      <div class="row"><span class="k">模型看到</span><span class="v">The tool call was interrupted after it was recorded, but no result was durably recorded. Its outcome is unknown. Decide whether to retry from the tool semantics: retry only if the operation is read-only or idempotent; if it may have side effects, first verify external state or ask the user. Do not retry blindly.</span></div>
+      <div class="row"><span class="k">中文</span><span class="v">这次工具调用在被记录之后中断了，但结果没有被持久记录。它的结果未知。要不要重试，按这个工具本身的语义判断：只有只读或者幂等的操作才重试；如果可能有副作用，先核实外部状态，或者问用户。不要盲目重试。</span></div>
+    </div>
+  </div>
+
+  <div class="data">
+    <div class="lbl">repair.ts 第 105 行 · 调用还没记下</div>
+    <div class="rows">
+      <div class="row"><span class="k">错误码</span><span class="v">TOOL_NOT_STARTED</span></div>
+      <div class="row"><span class="k">模型看到</span><span class="v">The tool call was interrupted before the Harness recorded it as started. Retry it if it is still needed.</span></div>
+      <div class="row"><span class="k">中文</span><span class="v">这次工具调用在 Harness 记下它已开始之前就中断了。如果还需要，重试。</span></div>
+    </div>
+  </div>
+
+  <p>两种情况的分界线，是那条 <code>tool/call</code> 记录有没有落盘。落了盘，说明工具正文可能已经跑过——文件可能已经删了、命令可能已经执行了——所以话说得很重，把判断权交回给模型，并且明说不要盲目重试。没落盘，说明工具正文一步都没进，直接放行重试。</p>
+
+  <h3>磁盘上的那个文件</h3>
+
+  <p>日志按项目分目录存，一个会话一个自己的目录：</p>
+
+<pre><code>&lt;配置的根目录&gt;/
+  --&lt;规范化后的工作目录&gt;--/
+    &lt;编码后的会话 id&gt;/
+      session.jsonl.zstd</code></pre>
+
+  <p>项目目录名是把工作目录路径规范化以后直接当目录名用，路径分隔符换成 <code>-</code>，不带哈希后缀，为的是多个项目共用一个存储根时能一眼认出是哪个项目。规范化是有损的，架构笔记里明写了这个取舍：<code>/a/b-c</code> 和 <code>/a-b/c</code> 会落进同一个项目目录，太长的路径只保留一段前缀。没有工作目录的会话进 <code>_no-cwd</code>。</p>
+
+  <p>文件的第一个逻辑行是文件头，它没有序号，也不算一条事件。这是前面那份测试日志的真实第一行：</p>
+
+<pre><code>{"type":"session","version":0,"id":"{{sessionId}}","createdAt":0,"cwd":"{{cwd}}","delegationDepth":0}</code></pre>
+
+  <p><code>{{sessionId}}</code> 和 <code>{{cwd}}</code> 是测试固件里替换掉的占位符，真实值随机器变化，替换掉才能逐行比对。版本号目前是 <code>0</code>（<code>packages/core/session/src/types.ts</code> 第 56 行），后端读到别的版本直接拒绝，没有迁移路径。报错时会说清方向：比本构建新，提示升级 harness 后再打开；比本构建旧，说明本构建没有升级路径。文件头里还会记 <code>parentSession</code>（从哪个会话分叉来的）、<code>seedLength</code>（继承了多少条）、<code>agentPreset</code>（这个会话用的是哪套工具和提示词）。这些是存储层的信息，刻意留在事件日志外面，不会进入发给模型的消息。</p>
+
+  <p>后缀是 <code>.zstd</code>，文件默认压过。压法是一串标准的独立 Zstandard 帧首尾相接：第一帧只装文件头那一行，之后每一次持久化追加各占一帧。这么切的好处是列会话清单时只需要读并校验第一帧，日志再大也不用碰事件部分。配置里把 <code>compression</code> 设成 <code>'none'</code> 就保留纯文本 <code>.jsonl</code>，但一个存储根只能属于一种编码，混着放会被拒绝。</p>
+
+  <p>还有一层压缩发生在压缩之前。模型是一个字一个字流出来的，每个片段都是一条 <code>assistant/chunk</code> 记录，而这些记录的 JSON 外壳比里面的内容大得多——<code>chunk-rows.ts</code> 第 4 行写着，在一次真实的 DeepSeek 会话上量到约 <strong>56 倍</strong>。所以连续 3 条或更多的同类片段会被打包成一行（<code>text-chunks</code>、<code>reasoning-chunks</code>、<code>tool-call-chunks</code>），一行里存首条的序号和时间，加上相邻两条之间的时间差数组，解开时逐条精确还原。</p>
+
+  <p>效果可以数出来。<code>apps/web/tests/snapshots/goal-multi-turn-actions/session.jsonl</code> 这份日志：</p>
+
+  <div class="data">
+    <div class="lbl">一份真实日志的打包效果</div>
+    <div class="rows">
+      <div class="row"><span class="k">逻辑事件</span><span class="v">2,098 条</span></div>
+      <div class="row"><span class="k">其中流式片段</span><span class="v">2,017 条（96.1%）</span></div>
+      <div class="row"><span class="k">文件实际行数</span><span class="v">183 行（1 行文件头 + 182 行记录）</span></div>
+      <div class="row"><span class="k">其中打包行</span><span class="v">23 行</span></div>
+    </div>
+  </div>
+
+  <p>JSONL 后端的 README 给的实测是逻辑日志约小 60%。打包只是写入侧的开关，读取侧不受影响：打包的、没打包的、混着的，加载出来完全一样。</p>
+
+  <p>这个文件的路径，模型自己也能拿到。每一次模型发起的 bash 调用都会收到一组新收集的 <code>DSH_*</code> 环境变量，其中 <code>DSH_SESSION_JSONL</code> 就是当前会话日志的绝对路径（前提是当前后端是 JSONL）。README 里同时写明了它的边界：这只是位置提示，第一次落盘之前文件可能还不存在，正在进行的那一轮也可能还没写进去，而且它不是一张授权凭证。</p>
+
+  <h3>从某一轮的末尾分岔</h3>
+
+  <p>日志只往后加，所以从中间劈开是安全的：把前 <em>n</em> 条原样拷一份，当作新会话的种子，父会话一个字节都不动。</p>
+
+  <p>网页版里每一轮回答的末尾有一个分支图标，悬停时显示的中文是<strong>「在新对话中分支」</strong>；用不了的时候显示的是<strong>「仅可从已完成轮次的最后一条消息分支」</strong>（两句都在 <code>packages/client/ui-conversation/src/client/locales.ts</code> 第 115、116 行）。会话列表里还有一个分支入口，那个不指定位置，从最后一个完成的轮次切。</p>
+
+  <p>按钮按下之后服务端怎么切，写在 <code>packages/host/apiproxy/src/api-proxy.ts</code> 第 2378 到 2404 行。</p>
+
+  <div class="trace">
+    <div class="t"><span class="tag">往后推</span><p>传进来的是一个事件序号。服务端把它往后推到<em>包含它的那一轮</em>的 <code>turn/end</code>。注释里说明了原因：一个落在轮次中间的锚点属于这一轮，绝不能往回退到更早的某个完整轮次。</p></div>
+    <div class="t"><span class="tag">再往后延</span><p>从这个 <code>turn/end</code> 继续往后延，一直延到下一个 <code>turn/start</code> 之前。中间那些游离记录也带上，比如刚生成的会话标题，这样子会话能继承那个标题。</p></div>
+    <div class="t"><span class="tag">切不出来就报错</span><p>整个日志里一个完成的轮次都没有，或者锚点所在的那一轮还没结束，请求直接失败，错误码 <code>fork-unavailable</code>。</p></div>
+    <div class="t"><span class="tag">照抄组装</span><p>子会话沿用父会话的 preset。代码注释给的理由：种子里的历史是在那套工具下产生的，换一套工具，历史里已经记下的那些工具调用就没了着落。</p></div>
+  </div>
+
+  <p>切出来的前缀原样作为子会话的种子，子会话的文件头记下 <code>parentSession</code> 和 <code>seedLength</code>。文件头不参与消息推导，所以子会话跑起来以后，模型看到的消息列表和父会话在那一刻的一模一样。它不知道自己是个分叉。</p>
+
+  <p>日志层还有一个更底层的入口，<code>ctx.sessions.fork(source, boundary?, childSessionId?)</code>，列在 <code>docs/architecture.md</code> 第 126 行的扩展点表里。它的边界检查更直白：边界必须落在一个已经关闭的轮次上，落进一个还开着的轮次里就抛 <code>OPEN_TURN</code>。</p>
+
+  <h3>把日志倒过来当模型用</h3>
+
+  <p>同一份文件反着读，可以顶替模型。<code>assistant/chunk</code> 里存着模型吐出的每一个片段，按 <code>(turn, step)</code> 分组，正好就是每一次模型调用该返回的那一串东西。</p>
+
+  <p><code>dsh-llm-replay</code> 这个插件干的就是这件事：读一份 <code>session.jsonl</code>，注册一个只会放录音的假适配器，把录下来的片段照着吐一遍。于是不用 API 密钥、不花钱、不联网，也能把整套软件真的跑起来——工具、循环、审批、界面全是真的，只有模型那一端是录音。</p>
+
+  <p>同一份文件还同时是预期输出。测试把回放跑出来的新日志归一化之后，和这份 fixture 原文逐行比。测试笔记第 19 行的原话是「因此，一份普通会话产物同时充当回放来源和行为预期输出」。行为对不上，diff 会指到具体哪一行。</p>
+
+  <p>有两种情况日志重建不出来。一是模型还没吐出任何片段就直接抛异常（比如 HTTP 401），日志里只剩一条带错误的 <code>turn/end</code>，没有片段可读。二是取消和挂起，差别在时序上而不在内容上，片段本身看不出区别。这两类场景要另外配一个 <code>replay.override.json</code> 伴随文件，可以整个替换派生出来的脚本，也可以只替换其中某几次调用。</p>
+
+  <p>一个会话把活派给它自己开出来的子会话时，会录下多份日志：父会话是 <code>session.jsonl</code>，子会话是 <code>session.1.jsonl</code>、<code>session.2.jsonl</code>。真实运行时会话 id 每次都重新随机生成，永远不会等于录制时的 id，所以绑定靠顺序：脚本按文件头里的 <code>createdAt</code> 排序（父会话一定在前，它得先开始输出才谈得上派活），第一个发起模型调用的实时会话拿第一份脚本，下一个新会话拿下一份。实时会话比录下来的脚本多，明确报错。</p>
+
+  <h3>整份拿走</h3>
+
+  <p>网页版的会话头部有一个 <code>Session log</code> 按钮，斜杠命令是 <code>/export</code>，两个入口共用一个下载控制器。它请求的是 <code>GET /api/session.export</code>，返回一个 ZIP；带上 <code>includeDescendants=true</code> 时，子会话的日志按 <code>subagents/&lt;id&gt;/session.jsonl</code> 一并打进去。</p>
+
+  <p>ZIP 里每个文件都是后端存的字节逐字解出来的原文，不从解析后的事件重新拼，所以打包行、键的顺序、换行全部逐字节保留。压缩在宿主端流式做，边生成边写出去，整个归档不会先在内存里攒成一整块。</p>
+
+  <p>下载端点会在读取前先把活着的根会话刷一遍盘。于是用斜杠命令导出时，ZIP 里会包含<em>启动这次下载</em>的那一对 <code>command/run</code> 和 <code>command/done</code> 记录。</p>
+</article>

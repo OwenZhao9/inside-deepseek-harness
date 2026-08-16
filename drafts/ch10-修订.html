@@ -1,0 +1,171 @@
+<article class="chapter">
+  <div class="rail"><span class="no">10</span><span class="t">插件架构</span></div>
+  <h2>整个产品就是一张清单</h2>
+
+  <p>DeepSeek Harness 的仓库里有一个 451 行的文本文件，路径是 <code>packages/bundle/base/cordis.patch.yml</code>。这 451 行里，102 行是注释，84 行是空行。剩下的部分是 78 条记录，一条记录对应一个零件。软件启动的时候照着这张清单把自己装起来。这些零件的正式叫法是<strong>插件</strong>。</p>
+
+  <p>文件第 24 到 28 行是两条完整的记录：</p>
+
+<pre><code>    - id: llm
+      name: '@deepseek-ai/dsh-llm'
+
+    - id: session
+      name: '@deepseek-ai/dsh-session'</code></pre>
+
+  <p><code>name</code> 是这个零件从哪儿加载，绝大多数时候就是一个包名，对应一份能单独发布、单独安装的代码。<code>id</code> 是它在这张清单上的代号，后面几层要改它、要关它，都靠这个代号找到它。上面这两条，第一条装的是跟模型说话的那一层，第二条装的是会话日志。</p>
+
+  <div class="data">
+    <div class="lbl">packages/bundle/base/cordis.patch.yml</div>
+    <div class="rows">
+      <div class="row"><span class="k">总行数</span><span class="v">451</span></div>
+      <div class="row"><span class="k">注释行</span><span class="v">102</span></div>
+      <div class="row"><span class="k">空行</span><span class="v">84</span></div>
+      <div class="row"><span class="k">插件记录</span><span class="v">78 条</span></div>
+      <div class="row"><span class="k">只有代号和包名的</span><span class="v">44 条</span></div>
+      <div class="row"><span class="k">带 config 的</span><span class="v">30 条</span></div>
+      <div class="row"><span class="k">带 disabled 的</span><span class="v">5 条</span></div>
+      <div class="row"><span class="k">用到的不同的包</span><span class="v">76 个</span></div>
+      <div class="row"><span class="k">被装两次的包</span><span class="v">2 个</span></div>
+    </div>
+  </div>
+
+  <p>78 条里有 44 条只有代号和包名两行，一个字的配置都没有。30 条多带一段 <code>config</code>，给零件传几个值。5 条带 <code>disabled</code>，写明什么情况下不装（其中一条两样都带）。</p>
+
+  <p>清单从上往下读，但顺序不代表启动顺序。文件开头第 12 到 13 行的注释专门说了这件事：行的排列不带任何加载语义，分组只是给读的人看的。决定谁先谁后的是依赖——一个插件在自己的代码里声明它需要哪些服务，那些服务全都就绪了它才启动。</p>
+
+  <h3>推着对话往前走的那一条，也在清单上</h3>
+
+  <p>第 436 行这一条：</p>
+
+<pre><code>    - id: agent-loop
+      name: '@deepseek-ai/dsh-agent-loop'
+      config:
+        agents: []</code></pre>
+
+  <p><code>agent-loop</code> 是默认的那个驱动器，一轮对话里的每一步——一次模型请求加上它调用的工具——都由它推动。它在这张清单上占四行，格式跟别的零件一样，一样带一个能被别人覆盖的代号。<code>agents: []</code> 是个空列表：base 这一层不预先创建任何 agent，网页版是收到客户端请求才建会话（第 434 到 435 行的注释）。</p>
+
+  <p>文件的最后两行是 DeepSeek 的模型适配器：</p>
+
+<pre><code>    - id: llm-deepseek
+      name: '@deepseek-ai/dsh-llm-deepseek'</code></pre>
+
+  <p>没有密钥，没有接口地址，没有任何配置。密钥和地址都在每次请求的时候现取，地址从设置里取，密钥从凭据库里取，第 446 到 449 行的注释写了这件事。</p>
+
+  <p>架构文档中文版第 11 行把这件事写成一句话：产品的每一部分都是插件，包括模型适配器、工具注册表、会话日志，以及 agent loop 本身，因此每一部分都可以从配置替换。</p>
+
+  <h3>同一个包装两次，模型看到两个工具</h3>
+
+  <p>78 条记录只用到 76 个不同的包，有两个包各被装了两次。一个是 <code>@deepseek-ai/dsh-tool-subagent</code>，第 313 行和第 324 行各装一次：</p>
+
+<pre><code>    - id: tool-subagent
+      name: '@deepseek-ai/dsh-tool-subagent'
+      config:
+        provider: spawn
+        toolName: subagent
+        backgroundMode: continuable
+
+    - id: tool-subagent-fork
+      name: '@deepseek-ai/dsh-tool-subagent'
+      config:
+        provider: fork
+        toolName: subagent_fork
+        backgroundMode: one-shot</code></pre>
+
+  <p>同一份代码，两组配置，模型的工具列表里就多出两个名字：<code>subagent</code> 和 <code>subagent_fork</code>。fork 为什么只跑一次，第 320 到 323 行的注释交代了：可续跑的子任务会先装上一个 <code>report</code> 工具和一段提示词，这两样排在被继承的对话历史前面，而 fork 存在就是为了复用那段历史；一次性的 fork 两样都不装，父任务请求的开头因此保持原样。</p>
+
+  <p>另一个被装两次的包是 <code>@deepseek-ai/dsh-tool-subagent-control</code>。第 307 行那条用的是裸包名，第 310 行那条的 <code>name</code> 后面多挂了一段路径——<code>@deepseek-ai/dsh-tool-subagent-control/list-agents</code>，指向同一个包里的另一个入口。一个包可以有好几个入口，清单上一个入口占一行。</p>
+
+  <h3>清单的头两行是框架自己</h3>
+
+  <p>这张清单的第一条装 <code>@deepseek-ai/cordis-plugin-timer</code>，第二条装 <code>@deepseek-ai/cordis-plugin-hmr</code>。名字里的 cordis 是这套插件机制本身的名字。README 中文版第 7 行用一句话交代它：「它采用<strong>一切皆插件</strong>的架构，并由 Cordis 驱动」，后面挂着一个 GitHub 地址和一篇论文地址。</p>
+
+  <p>Cordis 是一个已有的开源项目，仓库在 <code>github.com/cordiverse/cordis</code>。DeepSeek 没有把它当成一个普通的第三方库来装。仓库根目录下有个 <code>vendor/</code> 文件夹，里面是九个包的源码副本，Cordis 是其中一个。复制进来、而不是从 npm 这个公共软件仓库拉依赖，为的是让 DeepSeek Harness 完整拥有自己这一层框架，可审计、可打补丁、版本锁死——这句写在 <code>vendor/README.md</code> 第 3 行。</p>
+
+  <p>锁死具体到一次提交。第 17 行那一格记着 Cordis 的取源：<code>github.com/cordiverse/cordis</code> 的 <code>packages/core</code> 目录，提交号 <code>56b3d4f725681cf4556c1a8695a709cc3b6eed74</code>。同一格里还有一个版本号 4.0.0-rc.7，那是取源那一刻上游的版本，不是仓库里这份的版本——<code>vendor/cordis/package.json</code> 现在写的是 4.0.1，九个包的表内版本跟目录里的实际版本没有一个对得上。目录名和上游版本号是故意不跟着改的，好让这张表读起来仍然是一份上游快照，这一条写在第 5 行。</p>
+
+  <p>九个包里，两个取自 cordiverse 名下的原仓库，七个取自 deepseek-harness 名下的分支。九个全部改了名，收进 <code>@deepseek-ai</code> 这个命名空间，<code>cordis</code> 变成 <code>@deepseek-ai/cordis</code>。改名的原因也在第 5 行：DeepSeek Harness 的每个包都写明自己要跟 cordis 一起用、但不自己带一份（这种写法叫 peer 依赖），所以一发布 DeepSeek Harness，这层框架就跟着发出去了；用原名发会把别人在 npm 上的名字占掉。</p>
+
+  <p>复制进来就可以改。<code>vendor/README.md</code> 里有一节叫 Local modifications，开头一句话要求这份日志必须穷尽：每一处跟上游的偏离都必须列出来。目前列了 18 条。第 6 条给 Cordis 的生命周期代码补了三处漏洞，三处都跟卸载被重入有关。第 7 条是给 Cordis 公开接口补的文档注释，纯注释、没动代码，做它的原因是文档网站的接口参考由这些注释生成，遇到没写文档的成员会直接报错；这一条末尾自己写了退出条件——等这批注释推回上游分支，就把它从日志里删掉。</p>
+
+  <div class="data">
+    <div class="lbl">vendor/ 目录</div>
+    <div class="rows">
+      <div class="row"><span class="k">源码复制进来的包</span><span class="v">9 个</span></div>
+      <div class="row"><span class="k">取自 cordiverse 原仓库</span><span class="v">2 个</span></div>
+      <div class="row"><span class="k">取自 deepseek-harness 分支</span><span class="v">7 个</span></div>
+      <div class="row"><span class="k">登记在案的本地改动</span><span class="v">18 条</span></div>
+    </div>
+  </div>
+
+  <h3>装不装，写在这一行自己身上</h3>
+
+  <p>第 243 行这条记录带一个 <code>disabled: true</code>：</p>
+
+<pre><code>    - id: skill-badge
+      name: '@deepseek-ai/dsh-skill-badge'
+      disabled: true</code></pre>
+
+  <p>包在，名字在，代码也随发行版装到了机器上，只是不挂载。</p>
+
+  <p>另外四条 <code>disabled</code> 后面跟的是一小段要现算的判断：</p>
+
+<pre><code>    - id: bash-sandbox
+      name: '@deepseek-ai/dsh-bash-sandbox'
+      disabled: !!js process.platform === 'win32'
+      config:
+        timeoutMs: 60000
+
+    - id: pwsh-sandbox
+      name: '@deepseek-ai/dsh-pwsh-sandbox'
+      disabled: !!js process.platform !== 'win32'</code></pre>
+
+  <p><code>!!js</code> 是一个标记，告诉读配置文件的那个程序：这后面跟着一句表达式，要当场算出结果再用。<code>process.platform</code> 是当前操作系统，<code>win32</code> 指 Windows。两条记录的判断刚好相反，所以同一份文件在 Windows 上挂 PowerShell 那一套，在 Mac 和 Linux 上挂 bash 那一套。第 210 行和第 214 行的 <code>tool-bash</code>、<code>tool-pwsh</code> 是同样的写法。base 包的中文说明把结果写在 README 第 7 行：同一份 patch 文件，每个宿主恰好挂载一个 shell 栈。</p>
+
+  <p>这个写法一度是行不通的，而且以事故收场。事故复盘 0002 记的就是它。当时 ACP 示例的配置里写了 <code>disabled: !!js ...</code>，想让文件系统插件只在特定模式下启用；而 Cordis 只对插件的 <code>config</code> 求值，<code>disabled</code> 是直接读的，读到的是一个表达式对象，恒为真，于是文件系统那一套在所有模式下都没装上。七个文件系统场景和一个混合工作区编辑场景，调用的是注册表里根本不存在的工具。单元测试、覆盖率、快照、文档、构建、hygiene 检查全部通过。快照那一关是绿的，是因为刷新过的预期输出里已经写着 <code>UNKNOWN_TOOL</code> 的失败结果，跑出来的东西跟它对得上——复盘里的判词是：它证明的是回归的确定性回放，而非文件系统行为的正确性。</p>
+
+  <p>0002 当时的处置是禁止。复盘的「已添加的防护措施」一节列了四条：文件系统场景改用一份显式的全权限 overlay；<code>AGENTS.md</code> 和 Cordis 入门里写明 <code>!!js</code> 只在插件 <code>config</code> 内有效，条件式组合要用 overlay；门禁脚本 <code>verify-cordis-config</code> 解析仓库里的 Cordis YAML，条目元数据里出现表达式一律拒绝；快照工具拒绝把 <code>UNKNOWN_TOOL</code> 结果当成预期输出提交。</p>
+
+  <p>写法后来还是开了口子，是另一件事逼出来的。Windows 上 <code>tool-bash</code> 本来是关掉的，可随发行版交付的那几套预先配好的组合自己也各挂一行 <code>tool-bash</code>，它们最后组合，同名行又把它开了回来——Windows 上的会话同时拿到 <code>tool-bash</code> 和 <code>tool-pwsh</code>，全程没有任何报错。条件写不进条目元数据，这个问题就没法在它所治理的那一行上解决。<code>vendor/README.md</code> 登记的第 18 条本地改动是为它做的：让那个读配置文件的程序在每一次决定挂不挂的时候，对 <code>disabled</code> 求一次值。配套的设计记录写明 0002 的隐患顺带换了个关法——「<code>disabled</code> 上的 postmortem-0002 隐患以『求值』而非『禁止』关闭」。<code>id</code>、<code>name</code>、<code>group</code>、<code>inject</code> 仍然保持字面值，门禁脚本继续拒绝这些字段里出现表达式。</p>
+
+  <h3>补丁打在一张空清单上</h3>
+
+  <blockquote><p>不存在需要打补丁的特权内核：扩展 dsh 的方式是把插件挂载到其他插件旁边，而各项注册都是副作用，会在其插件卸载时撤销。（架构文档中文版第 13 行）</p></blockquote>
+
+  <p>451 行的这份清单文件名叫 <code>cordis.patch.yml</code>，patch 就是补丁。它自己也是一层补丁，打在一张空清单上——文件第 1 到 2 行写的是：整份 base 作为「一次插入」应用在空的根之上。网页版启动的时候一共叠这么几层：</p>
+
+  <div class="trace">
+    <div class="t"><span class="tag">第 1 层</span><p><code>dsh-base</code>，451 行，往空清单里插 78 条。</p></div>
+    <div class="t"><span class="tag">第 2 层</span><p><code>dsh-web-app</code>，424 行，改 base 的 27 条，另外插 51 条新的。</p></div>
+    <div class="t"><span class="tag">第 3 层</span><p>profile 目录下的 <code>cordis.patch.yml</code>。profile 是一套具名的装配：它自己列出要叠哪几个组合包，自己装额外的插件，也放这份用户改配置的文件。随发行版交付的模板有两套，叫 web 和 headless。</p></div>
+    <div class="t"><span class="tag">第 4 层</span><p>harness home 根目录下的那份 <code>cordis.patch.yml</code>。harness home 是这个软件在机器上的主目录，profile 目录就在它底下。这一层比 profile 那一层后应用，所以优先级更高。</p></div>
+    <div class="t"><span class="tag">第 5 层</span><p>启动时用 <code>--patch</code> 临时叠上去的文件，排在所有层最上面。</p></div>
+  </div>
+
+  <p>同一个代号被多层写到，最后写的那层生效。前两层是哪两个包，写死在 <code>packages/boot/app-boot/src/profile.ts</code> 第 115 行：网页版等于 <code>@deepseek-ai/dsh-base</code> 加 <code>@deepseek-ai/dsh-web-app</code>。紧挨着的第 116 行是另一套组合：<code>@deepseek-ai/dsh-base</code> 加 <code>@deepseek-ai/dsh-headless</code>。</p>
+
+  <p>web-app 那 424 行里，27 条冲着 base 已有的代号去。其中 24 条内容一模一样，就是 <code>disabled: true</code>。这 24 条里有 23 条排在第 276 行「agent 那一面移到预设背后」这道分界注释之下——<code>tool-bash</code>、<code>tool-fs</code>、<code>tool-todo</code>、<code>plan-mode</code>、<code>tool-web</code>……base 装上的这些，网页版一进来全部关掉，改由每个会话自己挂的预设来提供。剩下那一条是第 22 行的 <code>hmr</code>，跟预设无关：它上面第 21 行写着一句 TODO，等热重载的生命周期测好了再把共享 HMR 打开。</p>
+
+  <p>预设是一套预先配好的组合，写明一个 agent 往宿主的注册表里放什么：它有哪些工具、提示词里加哪几段、委派子任务走哪个后端。随发行版交付的有四套，放在 <code>config/agent-presets/</code> 下，是只读的；用户自己写的那些放在 harness home 的 <code>.agent-presets</code> 里。base 那 23 行留着是给终端界面用的：终端界面只跑一个会话，agent 在整个进程里组一次；网页版是一个会话一套，所以在这里把宿主那一层的行关掉。</p>
+
+  <p>另外 3 条重写配置，其中一条给系统提示词补上了 base 留空的那段人设：<code>You are a coding agent powered by the {{model}} model. Your working directory is {{cwd}}.</code></p>
+
+  <p>关掉而不是删掉，web-app 文件第 283 到 285 行的注释给了理由：base 是共享的，某一行在表层覆盖里缺席，等哪天有人调整了组合顺序，它会重新出现，而且不报任何错。</p>
+
+  <p>headless 是另一套表层：不开网页界面，不起服务器，从命令行接一句任务，跑完把结果打印出来就退出——文件开头五行写死了这个形态。它那份 patch 只有 35 行，改三条、插三条。改的是人设、热重载和工具模式，插的是代码执行的运行时、读命令行的启动器，以及那个跑完就退的运行器。</p>
+
+  <h3>一个配置字段里的 2332 个字符</h3>
+
+  <p><code>plan-mode</code> 这条记录的 <code>config</code> 底下有个字段叫 <code>section</code>，从第 268 行占到第 279 行，是 6 段英文，去掉缩进和换行一共 2332 个字符。第一句是 <code>You are in plan mode.</code></p>
+
+  <p>这段英文是发给模型的提示词。它规定模型在规划模式下只做只读的查看、搜索和检查，不许改文件、不许改配置、不许提交、不许跑会重写文件的格式化和代码生成；用户在对话里随口一句同意什么都不算数，确认过的决定要折进计划里，走 <code>exit_plan_mode</code> 提交；提交的那一次必须是那条回复里唯一且最后的工具调用。</p>
+
+  <p>base 这一份，网页版用不上。web-app 那 24 条 <code>disabled: true</code> 里就有 <code>plan-mode</code>，在第 348 到 349 行。网页版的规划模式提示词来自会话挂的预设，四套预设里有三套各写了一份 <code>section</code>，minimal 那套一条都没有。这三份跟 base 那份 6 段对 6 段，5 段一字不差，第 3 段差半句：base 第 273 行是 <code>those tools remain listed only to keep the request shape stable</code>，预设里是 <code>those tools remain listed to keep the tool catalog unchanged</code>。base 这 2332 个字符真正生效的地方是 headless——headless 那 35 行没碰 <code>plan-mode</code>。</p>
+
+  <h3>102 行注释</h3>
+
+  <p>最长的一块注释从第 129 行连到第 147 行，19 行，讲的是紧跟在它下面那条遥测记录——那条记录连代号带配置一共 14 行，比说明它的注释还短。</p>
+
+  <p>这 19 行里写了这些事：遥测挂着但默认是关的；环境变量 <code>DSH_TELEMETRY_MODE</code> 才能打开它，取值是 FULL 或者 FEEDBACK_ONLY；打开之后，会话日志的记录原样传到一个外部的收集服务，这条通道上没有脱敏规则，传出去的就是原始采集副本（默认收集地址写在第 154 行的配置里）；每次导出都带上 harness home 里的一个匿名用户 id，那个 id 存在 <code>$DSH_HOME/.anonymous-user-id</code>，是个随机 UUID，删掉文件就换一个身份。</p>
+
+  <p>同一段注释里还有一句是关于机制本身的：环境变量 <code>DSH_TELEMETRY_DISABLED</code> 只要非空就让整个进程退出遥测，哪怕填的是 <code>'0'</code> 或者 <code>'false'</code>。括号里说了这是怎么做到的——启动器打一层补丁把这一行标成关闭，因为 <code>config</code> 关不掉一行。</p>
+</article>

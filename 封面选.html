@@ -1,0 +1,157 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>封面五版</title>
+<style>
+:root{
+  --bg:#FCFCFB; --ink:#101113; --body:#3A3D40; --grey:#75787C; --faint:#A6A9AC;
+  --rule:#E5E5E2; --hair:#EFEFEC;
+  --hot:#DD4B32; --hot-deep:#B93A24; --hot-wash:#FDF0ED; --hot-line:#F5CFC6;
+  --sans:"PingFang SC","Hiragino Sans GB","Noto Sans CJK SC",-apple-system,sans-serif;
+  --mono:ui-monospace,"SF Mono",Menlo,monospace;
+  --lat:-apple-system,BlinkMacSystemFont,"Helvetica Neue",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#EFEFED;color:var(--ink);font-family:var(--sans);-webkit-font-smoothing:antialiased}
+.page{max-width:76rem;margin:0 auto;padding:48px 26px 90px}
+.hd h1{font-size:24px;font-weight:600;margin-bottom:8px}
+.hd p{font-size:14.5px;line-height:1.75;color:#6A6D70;max-width:36em;margin-bottom:34px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(310px,1fr));gap:34px}
+.slot > .cap{font-size:12px;letter-spacing:.16em;color:#8A8D90;font-weight:600;margin-bottom:10px}
+.slot > .why{font-size:12.5px;line-height:1.7;color:#7A7D80;margin-top:11px}
+
+/* 书封比例 3:4 */
+.cv{
+  aspect-ratio:3/4;position:relative;overflow:hidden;border-radius:4px;
+  box-shadow:0 2px 6px rgba(0,0,0,.09),0 18px 44px -20px rgba(0,0,0,.3);
+  display:flex;flex-direction:column;padding:11% 10%;
+  container-type:inline-size;
+}
+.cv .en{font-size:8.6cqw;font-weight:700;letter-spacing:.06em;line-height:1.1}
+.cv .zh{font-family:var(--lat);font-size:15.5cqw;font-weight:700;letter-spacing:-.045em;line-height:.92}
+.cv .sub{font-size:4.4cqw;font-weight:600;letter-spacing:-.01em;line-height:1.5}
+.cv .tail{position:absolute;left:10%;bottom:9%;font-size:2.9cqw;letter-spacing:.05em}
+
+/* ═════ A 纯字 ═════ */
+.A{background:var(--bg);color:var(--ink)}
+.A{justify-content:center}
+.A .en{color:var(--hot);margin-bottom:1.6cqw}
+.A .zh{margin-bottom:5cqw}
+.A .line{height:.7cqw;background:var(--hot);width:22%;margin-bottom:5cqw}
+.A .sub{color:var(--grey);font-weight:500}
+.A .tail{color:var(--faint);font-family:var(--mono);font-size:2.6cqw}
+
+/* ═════ B 红底反白 ═════ */
+.B{background:var(--hot);color:#fff}
+.B{justify-content:center}
+.B .en{color:rgba(255,255,255,.78);margin-bottom:1.6cqw}
+.B .zh{margin-bottom:5cqw}
+.B .line{height:.7cqw;background:rgba(255,255,255,.5);width:100%;margin-bottom:5cqw}
+.B .sub{color:rgba(255,255,255,.9);font-weight:500}
+.B .tail{color:rgba(255,255,255,.55);font-family:var(--mono);font-size:2.6cqw}
+
+/* ═════ C 上下分割 ═════ */
+.C{background:var(--bg);color:var(--ink);padding:0}
+.C .top{background:var(--hot);color:#fff;padding:9% 10% 8%;display:flex;flex-direction:column;gap:2cqw}
+.C .top .en{font-size:8cqw;letter-spacing:.06em}
+.C .top .sub{font-size:4.2cqw;color:rgba(255,255,255,.92)}
+.C .bot{flex:1;padding:9% 10%;display:flex;flex-direction:column;justify-content:center}
+.C .zh{font-size:16cqw}
+.C .tail{left:10%;bottom:8%;color:var(--faint);font-family:var(--mono);font-size:2.6cqw}
+
+/* ═════ D 一条线 ═════ */
+.D{background:var(--bg);color:var(--ink);justify-content:center;padding:11% 10%}
+.D .en{color:var(--hot);margin-bottom:1.6cqw}
+.D .zh{font-size:15cqw}
+.D .bar{height:1.5cqw;background:var(--hot);width:100%;margin:5cqw 0}
+.D .sub{color:var(--grey);font-weight:500;font-size:4cqw}
+.D .tail{color:var(--faint);font-family:var(--mono);font-size:2.6cqw}
+
+/* ═════ E 两条带子 ═════ */
+.E{background:var(--bg);color:var(--ink)}
+.E .straps{position:absolute;inset:0;z-index:0;pointer-events:none}
+.E .straps i{position:absolute;background:var(--hot);display:block}
+.E .straps i:nth-child(1){top:-12%;left:16%;width:7.5%;height:124%;transform:rotate(19deg)}
+.E .straps i:nth-child(2){top:-12%;left:38%;width:7.5%;height:124%;transform:rotate(19deg);opacity:.22}
+.E .straps i:nth-child(3){top:31%;left:-14%;width:128%;height:7.5%;transform:rotate(-9deg);opacity:.1}
+.E > *{position:relative;z-index:1}
+.E{justify-content:center}
+.E .en{color:var(--hot-deep);margin-bottom:1.6cqw;mix-blend-mode:multiply}
+.E .zh{margin-bottom:5cqw;mix-blend-mode:multiply}
+.E .sub{color:var(--body);font-weight:500;background:var(--bg);display:inline-block;padding:.4em 0}
+.E .tail{color:var(--faint);font-family:var(--mono);font-size:2.6cqw}
+</style></head><body>
+
+<div class="page">
+  <div class="hd">
+    <h1>封面五版</h1>
+    <p>产品名是主视觉，「深入浅出」贴在它头上成一组——不再是顶到天边的小标签。整组居中，字数信息沉到左下角。</p>
+  </div>
+
+  <div class="grid">
+
+    <div class="slot">
+      <div class="cap">A　纯字</div>
+      <div class="cv A">
+        <div class="en">深入浅出</div>
+        <div class="zh">DeepSeek<br>Harness</div>
+        <div class="line"></div>
+        <div class="sub">把 AI 拴在你电脑上的那一层</div>
+        <div class="tail">21 篇 · 76,725 字</div>
+      </div>
+      <p class="why">什么都不加，全靠字号差和留白。最安静，也最经得起长期看。</p>
+    </div>
+
+    <div class="slot">
+      <div class="cap">B　红底反白</div>
+      <div class="cv B">
+        <div class="en">深入浅出</div>
+        <div class="zh">DeepSeek<br>Harness</div>
+        <div class="line"></div>
+        <div class="sub">把 AI 拴在你电脑上的那一层</div>
+        <div class="tail">21 篇 · 76,725 字</div>
+      </div>
+      <p class="why">整版砖红。做小图最抢眼，公众号或者小红书的封面缩到很小也还认得出。</p>
+    </div>
+
+    <div class="slot">
+      <div class="cap">C　上下分割</div>
+      <div class="cv C">
+        <div class="top">
+          <div class="en">深入浅出</div>
+          <div class="sub">把 AI 拴在你电脑上的那一层</div>
+        </div>
+        <div class="bot">
+          <div class="zh">DeepSeek<br>Harness</div>
+          <div class="tail">21 篇 · 76,725 字</div>
+        </div>
+      </div>
+      <p class="why">上三分之一红块放英文名和副题，下面留给大字。结构感最强，像正经出版物。</p>
+    </div>
+
+    <div class="slot">
+      <div class="cap">D　一条线</div>
+      <div class="cv D">
+        <div class="en">深入浅出</div>
+        <div class="zh">DeepSeek<br>Harness</div>
+        <div class="bar"></div>
+        <div class="sub">把 AI 拴在你电脑上的那一层</div>
+        <div class="tail">21 篇 · 76,725 字</div>
+      </div>
+      <p class="why">四个字排一行，中间一道粗红杠把版面切开。上下大片留白，最像画册。</p>
+    </div>
+
+    <div class="slot">
+      <div class="cap">E　两条带子</div>
+      <div class="cv E">
+        <div class="straps"><i></i><i></i><i></i></div>
+        <div class="en">深入浅出</div>
+        <div class="zh">DeepSeek<br>Harness</div>
+        <div class="sub">把 AI 拴在你电脑上的那一层</div>
+        <div class="tail">21 篇 · 76,725 字</div>
+      </div>
+      <p class="why">几条斜着的红带子，是马具上皮带的抽象。唯一带图形的一版，但图形是画出来的，不是生成的。</p>
+    </div>
+
+  </div>
+</div>
+</body></html>

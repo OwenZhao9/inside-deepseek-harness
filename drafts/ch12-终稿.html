@@ -1,0 +1,139 @@
+<article class="chapter">
+  <div class="rail"><span class="no">12</span><span class="t">上下文窗口管理</span></div>
+  <h2>桌子就这么大</h2>
+
+  <p>DeepSeek Harness 出厂带两个模型，DeepSeek-V4-Flash 和 DeepSeek-V4-Pro。<code>packages/llm/llm-deepseek/src/index.ts</code> 第 50、51 行给它们声明了同一个容量，取自 <code>adapter.ts</code> 第 91 行的 <code>DEFAULT_CONTEXT_WINDOW = 1_000_000</code>。模型算账不按字数，是先把文字切成一个个小块再数，一块算一个<strong>词元</strong>，所以这里的一百万是一百万个词元。第 2 篇把这个上限比成一张桌子：「桌面就这么大，新材料铺上来，旧的就得收走。」</p>
+
+  <p>这一百万由几样东西分摊。系统提示词占一块，所有工具的说明书占一块，之前每一轮问答占一块，每一次工具返回的内容也占一块，全都从同一个数里扣。扣光了，请求发出去会被提供方顶回来。</p>
+
+  <p>收桌子的活分两头。<code>packages/spill</code> 下的三个包负责把单条太大的工具结果挪出对话，<code>packages/compaction</code> 下的四个包负责在整体快满的时候把旧的部分压掉。</p>
+
+  <h3>工具结果超过五万字节，全文写成文件</h3>
+
+  <p>每次工具跑完，一个监听器会量一下它准备交给模型的纯文本有多少 UTF-8 字节。上限叫 <code>maxInlineBytes</code>，随 <code>dsh</code> 一起发的基础配置把它设成 <strong>50000</strong>（<code>packages/bundle/base/cordis.patch.yml</code> 第 352 行）。判断只有一行，<code>packages/spill/spill-policy/src/index.ts</code> 第 203 行：<code>if (totalBytes &lt;= maxInlineBytes) return decision</code>。不超就原样放行。</p>
+
+  <p>超了，完整文本被写进一个文件，模型收到的换成开头一段、结尾一段，中间夹一行说明：</p>
+
+<pre><code>&lt;retained head/tail preview&gt;
+
+(Omitted N bytes. Full formatted result stored at: /…/session-…/…-web_fetch.txt. Use read with offset/limit, or grep this path to search within it.)</code></pre>
+
+  <p>末尾那句取回指引是后端给的固定文案，写在 <code>packages/spill/spill-local/src/index.ts</code> 第 60 行。全文一直在硬盘上，只是不再跟着每一次请求重发一遍。</p>
+
+  <p>文件落在一个每进程私有的临时目录里，目录权限 0700，文件名前面加一段随机十六进制。写入用的是 <code>open(path, 'wx', 0o600)</code>（<code>packages/spill/spill-local/src/store.ts</code> 第 113 行）——目标路径只要已经存在就直接失败，是符号链接也失败。这样同一台机器上的别的用户既读不到工具抓下来的网页和文件内容，也没法预先摆一个链接把写入引到别处。</p>
+
+  <p>替换后的内容有一条硬保证：绝不会比 50000 字节更大。说明那一行的字节数先按最坏情况从预算里扣掉，剩下的才分给首尾预览；扣完不够，就干脆放弃替换、保留原来的内联结果（<code>spill-policy/src/index.ts</code> 第 183 行）。存储失败、没有会话归属、后端没装，同样是保留原结果，不会把一次成功的工具调用变成报错。</p>
+
+  <p>第 196、197 行的同一个条件一口气跳过四种情况：不是「接受」的决策、已经自带替换值的决策、嵌套在别的调用里面的子调用，还有 <code>read</code>。<code>read</code> 的理由写在第 195 行的注释里，是避免 <code>read → spill → read again</code> 的循环——模型为了看被省掉的部分去 read 那个文件，read 的结果又太大又被写成新文件，就绕不出来了。</p>
+
+  <p>这条豁免只管发给模型的那一份。同一个文件第 217 行还挂着第二个监听器，管的是子调用结果写进会话日志的那份副本，那条路上 <code>read</code> 照样按同一个上限落盘。第 219 到 221 行的注释给的理由是：日志副本不进模型上下文，循环不成立，而 <code>read</code> 恰恰是最容易产生巨型日志的工具。</p>
+
+  <h3>到八成，先剪工具结果的中段</h3>
+
+  <p>压缩的触发点是一个比例。<code>packages/compaction/compaction-basic/src/config.ts</code> 第 20 行，<code>DEFAULT_THRESHOLD_RATIO = 0.8</code>；第 144 行把它乘上模型容量再向下取整，<code>Math.floor(contextWindow * policy.thresholdRatio)</code>。一百万的窗口算出来是 80 万词元。</p>
+
+  <p>检查发生在每一步开始之前。一步是模型发一次请求，连同这次请求叫的那些工具（<code>docs/architecture.md</code> 第 65 行：「A <strong>step</strong> is one model request plus the tools it calls.」）——一次请求并排叫三个工具仍然是一步，一个工具都没叫也是一步。步与步之间量一次当前总量，低于 80 万就直接返回，什么都不做（<code>index.ts</code> 第 304 行）。这道检查每一步都跑，每次都会克隆一份当前的消息列表，代价随历史长度线性增长；<code>dsh-token-meter</code> 的限制说明里单列了这条，并注明连没过阈值的压力检查也照付。</p>
+
+  <p>过线之后先动的是一个完全不叫模型的剪枝服务。它扫一遍当前历史，把每一条超预算的工具结果改写成「开头 + 固定标记 + 结尾」。默认预算写在 <code>packages/bundle/base/cordis.patch.yml</code> 第 363 到 365 行：文本超过 8192 个字符就剪，留开头 4096 个、结尾 1024 个。中间那段被换成一行固定的字：</p>
+
+<pre><code>[... tool result middle pruned ...]</code></pre>
+
+  <p>剪完立刻重新量一次。如果这时已经回到 80 万以下，摘要压根不跑（<code>index.ts</code> 第 308 到 312 行）。整个剪枝过程不发起任何模型调用。</p>
+
+  <p>剪枝按 Unicode 码点切。码点是 Unicode 给每个字符编的号，照它下刀，切口不会落在一个字符内部。但一个看上去是整体的东西要是由好几个码点拼起来的——带肤色修饰符的 emoji、组合出来的字符——切口照样可能落在它们中间。<code>compaction-tool-result-pruner/src/index.ts</code> 第 79 行的注释末尾一句：<code>Grapheme clusters may still split.</code>；<code>README.zh.md</code> 第 62 行把它单列成一条限制。</p>
+
+  <p>剪枝也不理解中间哪几行更重要。<code>dsh-compaction-tool-result-pruner</code> 把这条写在自己的说明里：「剪枝只基于语法：它保留开头与结尾，不解释中间哪些行在语义上重要。」</p>
+
+  <h3>剪完还超，才叫模型写检查点</h3>
+
+  <p>要压掉哪一段，是从最新的一条往回数出来的。<code>region.ts</code> 第 112 到 119 行从最后一条历史开始，把每条的词元数往回累加，加到够 <code>retainTokens</code> 就停；停住那条连同它之后的全部保留原样，再往前的全部压掉——压缩区间的末端是停住那条的前一条（第 132 行的 <code>const cutoff = surfaceNodes[keepFromIdx - 1]</code>）。<code>retainTokens</code> 同样由比例算出，默认 <code>DEFAULT_RETAIN_RATIO = 0.16</code>（<code>config.ts</code> 第 23 行），一百万的窗口对应 16 万词元。</p>
+
+  <p>切点定下来之后还要往前挪。第 122 到 127 行一格一格试，直到这个位置不会把一次工具调用和它的结果切开为止。助手消息说「我要调 read」，紧接着的一条是 read 的返回，从这两条中间下刀，模型就会收到一个没有下文的调用。轮次边界则不受保护——一个跑了很久的轮次，里面早就结束的步骤照样会被压掉。</p>
+
+  <p>摘要是一次单独的模型调用。它直接打底层的 <code>llm/stream</code>，不经过正常对话要过的 <code>agent/request</code> 那道扩展点（<code>compaction-basic/README.zh.md</code> 第 18 行）。它把要压掉的那段历史，连同会话自己的系统提示词和工具说明，一字不差地重放一遍，然后在最后追加一条 user 消息，也就是压缩指令（<code>summarizer.ts</code> 第 31 到 66 行、146 到 163 行）。</p>
+
+  <p>重放得一字不差，是为了让这次调用的开头和上一次正常请求完全一致。模型处理一段文字时算出来的中间结果，提供方那边会存着，下次开头相同就能直接拿来用，省掉重算——存的这份东西叫 <strong>KV Cache</strong>。<code>dsh-compaction-basic</code> 的文档把这条写得很直白：重放的部分能命中缓存，只有末尾那条指令和生成出来的摘要要重新算。把摘要器配到另一个提供方、换一个模型，或者压的不是最靠前的那一段，这份复用都会作废（<code>README.zh.md</code> 第 156 行）。</p>
+
+  <p>压缩指令要求模型输出固定的八个小节，一节都不许少，空的写 <code>(none)</code>。每一节下面还跟着一行方括号，说明这一节要装什么：</p>
+
+  <div class="data">
+    <div class="lbl">检查点的八节（<code>summarizer.ts</code> 第 36 到 58 行）</div>
+    <div class="rows">
+      <div class="row"><span class="k">Primary Request and Intent</span><span class="v">用户最初的目标和后来变过的目标，措辞要紧的地方逐字引用</span></div>
+      <div class="row"><span class="k">Key Technical Concepts</span><span class="v">用到的技术、框架、模式和约定</span></div>
+      <div class="row"><span class="k">Files and Code</span><span class="v">确切路径、为什么重要、关键改动或片段</span></div>
+      <div class="row"><span class="k">Errors and Fixes</span><span class="v">报了什么错、怎么解决的，连同相关的用户反馈</span></div>
+      <div class="row"><span class="k">Pending Jobs</span><span class="v">明确要求过、还没做完的活</span></div>
+      <div class="row"><span class="k">Current Work</span><span class="v">写检查点这一刻正在做的事</span></div>
+      <div class="row"><span class="k">Next Step</span><span class="v">紧接着的那一个动作，必须承接最近一次请求</span></div>
+      <div class="row"><span class="k">Critical Context</span><span class="v">做过的决定和理由、约束、用户偏好、悬着的问题、接着干活要用的数据</span></div>
+    </div>
+  </div>
+
+  <p>指令里还有一条针对旧摘要的规则（<code>summarizer.ts</code> 第 65 行）：如果对话里已经有一份 <code>&lt;compacted-summary&gt;</code>，那是上一次压缩留下的检查点，不许原样抄下来，要把还成立的事实留着、过时的丢掉、新信息合并进去。压缩会反复发生，这条规则要求每次只留一份合并后的摘要。</p>
+
+  <p>模型交回来的文本被包进一对 <code>&lt;compacted-summary&gt;</code> 标签，前面再加一段固定的开场白（<code>summarizer.ts</code> 第 69 到 70 行）：</p>
+
+<pre><code>This is an automatically generated checkpoint condensing an earlier span of the conversation to free up context. Treat the captured context as established background and build on it without restating it. Continue the task directly from the messages that follow, without acknowledging this checkpoint.</code></pre>
+
+  <p>意思是：这是一份自动生成的检查点，把前面一段对话压缩了；把里面的内容当成已经确立的背景，别复述，也别提这份检查点，直接接着后面的消息干活。模型返回的内容里只有纯文本进检查点，推理和工具调用都被排除（<code>summarizer.ts</code> 第 223 行只留下 <code>type === 'text'</code> 的块）；如果模型输出了图片，这次压缩直接报 <code>UNSUPPORTED_CONTENT</code>（第 221 行）。</p>
+
+  <p>摘要调用自己也有输出上限，默认 <code>maxTokens: 8192</code>（<code>config.ts</code> 第 91 行）。写超了会以 <code>MAX_TOKENS</code> 报错，这次压缩算失败，而不是留下一份写了一半的检查点（<code>summarizer.ts</code> 第 206 到 209 行）。</p>
+
+  <div class="data">
+    <div class="lbl">出厂默认值</div>
+    <div class="rows">
+      <div class="row"><span class="k">单条工具结果上限</span><span class="v">50000 字节</span></div>
+      <div class="row"><span class="k">工具结果剪枝触发</span><span class="v">8192 字符</span></div>
+      <div class="row"><span class="k">剪枝后保留</span><span class="v">开头 4096 + 结尾 1024 字符</span></div>
+      <div class="row"><span class="k">摘要触发</span><span class="v">容量的 80%（百万窗口 = 80 万词元）</span></div>
+      <div class="row"><span class="k">逐字保留的近期部分</span><span class="v">容量的 16%（= 16 万词元）</span></div>
+      <div class="row"><span class="k">摘要输出上限</span><span class="v">8192 词元</span></div>
+      <div class="row"><span class="k">压不下去的额外重试</span><span class="v">1 次</span></div>
+      <div class="row"><span class="k">提供方报溢出后的重试</span><span class="v">1 次</span></div>
+    </div>
+  </div>
+
+  <h3>压不下去就报错</h3>
+
+  <p>摘要落地之后重新量。还在 80 万以上，就再压一轮。轮数由 <code>compactionRetries</code> 决定，默认 1，也就是首次之外再多试一次（<code>config.ts</code> 第 92 行）。两次都没压到线下，抛异常，异常里带着当前估算词元数和阈值（<code>index.ts</code> 第 328 到 331 行）。自动路径会把这个异常接住，记一条警告，然后带着仍然超预算的那份历史把这一轮跑完（<code>index.ts</code> 第 155 到 162 行）。已经落地的剪枝和摘要替换不会回滚，接着跑的是压过之后还是超预算的那一份——「携带完整超预算历史继续」只适用于一次替换都还没发生的时候（<code>README.zh.md</code> 第 164 行）。</p>
+
+  <p>还有一道更基础的拒收。<code>region.ts</code> 第 374 行把加过开场白和标签的摘要重新估一遍，只要它不比被遮住的那段更短，就直接抛错。</p>
+
+  <p>另一条入口不看阈值。请求已经发出去、提供方回了「超出上下文窗口」这个错误，走的是 <code>agent/request-error</code>：先剪枝，然后把保留尾部的预算设成 0（<code>index.ts</code> 第 288 行的 <code>selectCompactableRange(agent.session, measurement, 0)</code>），能压多少压多少，只留最后一个切不开的单元，再重试请求。重试上限 <code>maxOverflowRetries</code> 默认也是 1（<code>config.ts</code> 第 93 行）。</p>
+
+  <p>这条路有它管不了的情况，<code>dsh-compaction-basic</code> 把它们列在限制里：它缩不了系统提示词、工具说明和请求前缀，拆不开一个本身就不可分的非工具节点，也修不好一条剪完还是超窗的工具结果。</p>
+
+  <div class="trace">
+    <div class="t"><span class="tag">工具返回时</span><p>单条纯文本超 50000 字节：全文写文件，模型收到首尾预览加路径。</p></div>
+    <div class="t"><span class="tag">每步之前</span><p>量一次当前总量。低于 80 万，返回，不动。</p></div>
+    <div class="t"><span class="tag">过线</span><p>剪掉每条超 8192 字符的工具结果的中段，重新量。回到线下就到此为止。</p></div>
+    <div class="t"><span class="tag">还超</span><p>从最旧的一头选一段，避开工具调用与结果的配对，叫模型写检查点，替换掉。</p></div>
+    <div class="t"><span class="tag">仍然超</span><p>再压一轮。还不行，抛异常，带着超预算的历史继续。</p></div>
+    <div class="t"><span class="tag">提供方报溢出</span><p>跳过阈值和保留预算，能压多少压多少，重试一次。</p></div>
+  </div>
+
+  <h3>日志里一条都没少</h3>
+
+  <p>压缩改的是真正发给模型的那份消息列表——这份列表从会话日志里派生出来，仓库里管它叫「表层」。日志本身只能追加（<code>docs/subsystems/session.zh.md</code> 第 5 行）。摘要落地的做法是追加一条新的 user 消息，带上 <code>surfaceOp: { op: 'replace', start, end }</code>，把旧的那一段从表层上遮住（<code>region.ts</code> 第 462 到 465 行）。被遮住的事件还在原来的位置，序号还在，内容一个字没改。剪枝也是同一套动作：每条被剪的工具结果是追加一条新的 <code>tool/result</code> 去替换旧的，旧事件保留完整原文（<code>compaction-tool-result-pruner/src/index.ts</code> 第 167 到 173 行）。</p>
+
+  <p>给人看的那份对话记录读的是日志里追加来源的事件，不读表层（<code>docs/subsystems/session.zh.md</code> 第 311 行）。压缩之后往上翻，被压掉的内容原样还在。</p>
+
+  <p>落盘的文件则没有自动清理。<code>dsh-spill-local</code> 把这条明确写进限制：这个后端不提供按会话生命周期删除或按时间保留的策略，因为已经持久化、已经恢复、以及 fork 出去的会话都可能还在引用某个路径。文件留在临时目录里，等外部清理。</p>
+
+  <h3>界面上的那个圆环</h3>
+
+  <p>输入框发送按钮旁边有一个 14 像素的小圆环，画的是上下文占用比例。悬停在上面给出的那行字模板是 <code>'上下文已用 {percent}'</code>；展开的面板把当前占用拆成系统提示词、工具、对话消息三段，各给一个估算词元数，标题那一行并着「~已用 / 总容量」（<code>packages/client/ui-conversation/src/client/skeleton/ContextMeter.tsx</code> 第 117 到 147 行，五条文案在 <code>src/client/locales.ts</code> 第 52 到 56 行）。分子和容量只要有一个不知道，这个环整个不显示。</p>
+
+  <p>压缩真的发生时，对话流里会多出一条记录。运行中显示「正在压缩…」，完成后变成「已压缩 {items} 条历史记录（约 {tokens} tokens）」，点一下能展开那份摘要原文（<code>locales.ts</code> 第 107 到 111 行）。轨迹视图里也有对应的一格，那边的文案没做中文：运行中是 <code>Compacting context…</code>，失败时先显示提供方给的那条具体错误，没有具体错误才落到 <code>Compaction failed</code>（<code>packages/client/ui-trajectory/src/client/layout.ts</code> 第 311 到 314 行）。</p>
+
+  <p>不等到八成也能手动触发。<code>/compact</code> 注册在 <code>ctx.commands</code> 这个命令注册表上（<code>packages/interaction/commands</code>），说明文字是 <code>Compact older conversation history</code>（<code>packages/compaction/command-compact/src/index.ts</code> 第 102 行）；Web 端把它放在输入框左边那个标着「命令」的按钮后面（<code>locales.ts</code> 第 23 行、<code>InputBar.tsx</code> 第 734 行）。它要求 agent 处于空闲状态，正在跑轮次的时候调用会直接回 busy；不接受任何参数，后面跟东西会得到 <code>Usage: /compact (no arguments)</code>；没有可压的历史则回 <code>No compactable history yet.</code>，一个字都不写。手动压缩不看阈值，保留尾部的预算也是 0，尽量往前压（<code>compaction-basic/src/index.ts</code> 第 379 到 383 行）。</p>
+
+  <h3>那个百分比是估出来的</h3>
+
+  <p>数词元用的是一套固定换算，不做真正的分词。<code>packages/llm/token-meter/src/estimate.ts</code> 第 13 行 <code>CHARS_PER_TOKEN = 4</code>，文本长度除以 4 向上取整；第 16 行和第 19 行再各加 4，一个是每个内容块的结构开销，一个是每条消息的角色字段开销。提供方报了真实用量、并且这次请求的信封跟量过的那份完全一致时，测量会复用那个真实数；对不上就整个回退到这套估算。</p>
+
+  <p>四个字符算一个词元这条规则，对中文尤其不准。<code>dsh-token-meter</code> 的文档自己写着，按「4 字符 ≈ 1 token」计价，CJK 文本和 JSON schema 会被<strong>严重低估</strong>。</p>
+
+  <p>界面上那个百分比和压缩的触发判断，读的还不是同一个数。同一份文档第 42 行说明了这件事：占用率是给人看的参考数字，软件里没有任何环节拿它做决策，压缩直接读 <code>measure()</code>。圆环读的是 <code>projectedTokens</code>——以提供方最近一次报的用量为锚，再把这之后消息列表的增减按估算补上（<code>StatsLine.tsx</code> 第 146 行）。</p>
+</article>

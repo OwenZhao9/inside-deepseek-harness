@@ -1,0 +1,131 @@
+{
+  "no": "15",
+  "title": "把一段活分包出去",
+  "verdict": "需修",
+  "factErrors": [
+    {
+      "claim": "点进一个还活着、父对话也还在线的可继续子对话，输入框是可用的：在那里发消息走的就是 send_message 那条路，旁边的 Stop 走的是 interrupt_agent 那条路。",
+      "problem": "把 Web 界面的路径和模型手里的工具硬连成同一条路。这正是「把两件都存在的事实用因果硬连起来」那一类错误——而且作者自己的事实清单第 39 条写对了（subagent.prompt / subagent.interrupt），是正文把它改错的。",
+      "truth": "packages/client/ui-subagent/README.zh.md:9 原文是「其会话通过 `subagent.prompt` 路由提示词……独立的 Stop 经由 `subagent.interrupt` 路由」，同一行结尾还写着「本包绝不接收宿主上下文，也不调用面向模型的工具」。subagent.prompt / subagent.interrupt 是 apiproxy 的 RPC 端点（packages/host/apiproxy/src/fetch/client.ts:105-106、src/fetch/handler.ts:105-106），跟 send_message / interrupt_agent 两个模型工具是完全不同的两条路径。grep -rn \"send_message|interrupt_agent\" packages/client/ui-subagent/src/ 零命中。"
+    },
+    {
+      "claim": "启动方式有两种，仓库里叫 spawn 和 fork，各自是一个独立的包。",
+      "problem": "「仓库里」是仓库级断言，数字数少了。跟「40 多个工具实际 51 个」同一类。",
+      "truth": "ctx.subagents.registerProvider 在仓库里有 6 个调用点：subagent-spawn-in-process/src/index.ts:63、subagent-fork-in-process/src/index.ts:93、subagent-acp/src/index.ts:188、subagent-codex/src/index.ts:100、subagent-claude-code/src/index.ts:111、subagent-dsh-sdk/src/index.ts:137。作者自己的事实清单第 47 条就写着 6 个。而且三套预设各挂了 4 个委派工具实例（subagent/spawn、subagent_fork/fork、subagent_codex、subagent_claude_code，后两个 disabled: true），文章从头到尾没提 fork 的工具名叫 subagent_fork。"
+    },
+    {
+      "claim": "只有 completed 算成功，其余四种在父对话那边都变成一条出错的工具结果……这四种情况下子对话已经写出来的半截答案不会被扔掉。",
+      "problem": "这套映射只在前台（run_in_background: false）那条路上成立，文章把它写成了通用规则；而下一节才说默认走后台，等于读者刚学的规则在默认配置下恰好不生效。",
+      "truth": "stopReasonError（packages/subagent/tool-subagent/src/index.ts:123）和 withPartialText（同文件:149）全仓只有一个调用点：settleForegroundRun（167-197 行，调用在 170、174 行）。可继续后台路径在 execute 里 392-400 行 startContinuable 之后直接 return { kind: 'continuable', subagentId }，工具结果就是 `started subagent <id>`；结束原因是后来由 continuation.ts:1400 notifySettlement 投的那条通知带回来的，不是出错的工具结果，也不走 withPartialText。"
+    },
+    {
+      "claim": "普通侧边栏不列这些子会话，页头这棵树是进入它们的唯一入口（同一文件第 11 行）。",
+      "problem": "原文说的是「导航入口」，文章加码成「唯一入口」；同一行的后半句被整句丢掉。",
+      "truth": "packages/client/ui-subagent/README.zh.md:11 原文：「普通侧边栏会省略带 subagent origin 的会话行，因此 parent 页头目录是它们的导航入口。普通 fork 仍保留在侧边栏中。」"
+    },
+    {
+      "claim": "结束原因有五种，写在 docs/subsystems/subagent.zh.md 第 347–358 行。",
+      "problem": "原文明说这个词表可扩展，文章写成封闭的五种；而且文章引的 124–138 行范围正好包含第六个分支却没提。",
+      "truth": "docs/subsystems/subagent.zh.md:342 的注释：「Merge-extensible (a backend may add variants)」。tool-subagent/src/index.ts:135-138 有 default 分支 `subagent run ended abnormally (${String(result.stopReason)})`。应写「已知的有五种」。"
+    },
+    {
+      "claim": "否则一个恢复出来的深层子对话会被重新当成顶层，接着往下再套三层。",
+      "problem": "「再套三层」是文章自己加的数字，没有任何来源。",
+      "truth": "depth.ts:20-23 只写「counting it from zero would let it delegate as if it were top-level」；docs/subsystems/subagent.zh.md:55 只写「恢复后的子 agent 不会被重新计为顶层」。两处都没有推到具体层数。"
+    },
+    {
+      "claim": "spawn 起一个全新的子对话：……只继承父对话的工作目录和模型（第 5、9 行）。",
+      "problem": "一个「只」把源里写着的另一项排除掉了。",
+      "truth": "subagent-spawn-in-process/README.zh.md:9 原文：「子 agent 获得父 agent 的工作目录/会话谱系，并默认继承父 agent 模型（除非覆盖）」；第 5 行还有「复用宿主的 agent 工厂及 LLM／工具服务」。漏了「会话谱系」。"
+    },
+    {
+      "claim": "两种起法都只传对话内容。",
+      "problem": "把 fork 专属的一句话推广到 spawn，而 spawn 一条对话内容都不传。",
+      "truth": "来源是 subagent-fork-in-process/README.zh.md:13「初始内容只传递对话历史」，是 fork 的段落。spawn 侧 README.zh.md:9：「`start(request)` 不传入 seed……以空对话开始运行」。"
+    },
+    {
+      "claim": "（spawn/fork）不继承父对话的工具限制，也不继承权限。……（后文）父会话显式设过的沙箱覆盖项照抄一份。",
+      "problem": "同一篇里两句自相矛盾，中间不加区分。前一句讲的是注册作用域，后一句讲的是委派策略快照，读者读到第二处会以为第一处被推翻了。",
+      "truth": "fork README:13 的「不继承……权限」指注册作用域；child-agent.ts:199-204 的 captureDelegatedPolicyOverrides 明确把父会话的显式沙箱覆盖项快照给子对话，approvalPolicy 钉成 'never'。两者是两个层面的事，文章必须写清楚哪一层不继承。"
+    },
+    {
+      "claim": "每个进程内子对话还会在自己的提示词里收到一条声明（同一文件第 135–139 行）。",
+      "problem": "代码注释刻意区分了「运行时上下文贡献」和「系统提示词 section」，文章把这个区分抹掉了。",
+      "truth": "packages/subagent/subagent/src/child-agent.ts:130-134 注释：「A runtime-context contribution rather than a system-prompt section, so the deployment's system prompt stays uniform across parents and children.」这两者可以分别开关——minimal 预设第 13 行就是 includeRuntimeContext: false。"
+    },
+    {
+      "claim": "后台子对话的详细输出永远不通过委派工具返回，要看只能按 id 去翻它自己的会话记录。",
+      "problem": "把源里两半中的一半写成了全部。",
+      "truth": "packages/subagent/tool-subagent/README.zh.md:80 原文：「一次性任务的最终输出通过通用 Task 接口收集，可继续子 agent 的输出留在其自身会话中，按其 subagent id 读取。」一次性后台走的是 Task 接口，不是「按 id 翻会话记录」。"
+    }
+  ],
+  "ruleViolations": [
+    {
+      "rule": "第 10 条（先讲明白再贴标签，一段最多欠一个新词）",
+      "quote": "两种起法都只传对话内容。子对话拿到的是一个全新的扁平注册作用域，不继承父对话的工具限制，也不继承权限。",
+      "fix": "整段删。「扁平注册作用域」全篇没有一个字的解释，读者读完只多了一个不认识的词组。要保留的信息只有一条，并进权限那一节用大白话写：「父对话给自己加过的工具黑白名单不会跟着传给子对话。」"
+    },
+    {
+      "rule": "第 10 条（一段最多欠一个新词）",
+      "quote": "启动方式有两种，仓库里叫 spawn 和 fork，各自是一个独立的包。",
+      "fix": "先说机制再给名字：「一种是从一张白纸开场，另一种带着父对话已经完成的轮次开场。前者叫 spawn，后者叫 fork。」（顺带把「6 个提供方、其中两个是进程内的」这件事说准，见事实错误第 2 条。）"
+    },
+    {
+      "rule": "第 1 条（主语是事物，不是「你该做什么」）",
+      "quote": "什么时候值得分包 / 要看只能按 id 去翻它自己的会话记录",
+      "fix": "小标题改成事物：「这笔账怎么算」。正文改成「详细输出留在子对话自己的会话记录里，按 subagent id 读取」。"
+    },
+    {
+      "rule": "第 7 条（不用「不是 X，是 Y」对仗句）+ 第 4 条（拟人化）",
+      "quote": "任何需要人点头的操作都会被确定性拒绝，而不是挂在那里等一个没人看的提示框。",
+      "fix": "拆成两句、去掉「挂在那里」：「任何需要人点头的操作都会被直接拒绝。子对话不会停下来等一个没人看的提示框。」"
+    },
+    {
+      "rule": "第 4 条（不用拟人化俏皮动词）",
+      "quote": "子对话没有机会开口说自己怎么了，所以这条通知的投递不能依赖它。",
+      "fix": "「子对话来不及汇报，所以这条通知的投递不能依赖它。」"
+    },
+    {
+      "rule": "段末总结金句 / 第 14 条（讲东西，别讲这篇文章）",
+      "quote": "末句「it does not see this conversation」是硬约束。派活的那段文字要自己把话说全，因为对面读不到这边说过什么。",
+      "fix": "删掉「是硬约束」这种替读者下结论的定性，只留机制：「派活的那段文字要自己把话说全，对面读不到这边说过什么。」"
+    },
+    {
+      "rule": "第 14 条（讲东西，别讲这篇文章——这条也管指着引文说「这句管什么」）",
+      "quote": "最后半句管的是失败怎么收场。",
+      "fix": "删这一句，直接写机制：「权限不够时子对话不重试被拒的那个操作，把这条限制写进自己的回复交回去。」"
+    },
+    {
+      "rule": "段末总结金句 / 第 7 条对仗句",
+      "quote": "省下来的是父对话的额度，付出去的是另一份额度。",
+      "fix": "这句是对仗收尾，后面两句本来就有具体机制。直接删，从「spawn 起的子对话不复制父对话历史……」开始。"
+    },
+    {
+      "rule": "事实纪律第 1 条（每一处事实断言必须能指到源头）",
+      "quote": "能中断谁由服务判定，工具本身不带任何权限。目标可以是直接下级，也可以是更深一层的后代，判据是调用者在不在目标记录下来的祖先链上。",
+      "fix": "整段没有出处。补上 packages/subagent/tool-subagent-control/src/index.ts 第 114–116 行（已核对：注释原文「The service authorizes the exact live caller against the target's recorded lineage; the tool adds no authority of its own.」）。"
+    },
+    {
+      "rule": "事实纪律第 1 条",
+      "quote": "continuable 的意思是模型调用这个工具时默认不等结果。",
+      "fix": "这句无出处，文章给的 388–429 行是另一段。真正的出处是同文件第 259–263 行：`runInBackground: request.run_in_background ?? options.continuable`。"
+    },
+    {
+      "rule": "事实纪律第 1 条",
+      "quote": "父对话此后又说了什么，子对话也看不到——fork 给的是启动那一刻的快照，之后两边没有任何实时共享。",
+      "fix": "这句挂在「第 9–11 行」的引注下，但 9–11 行讲的是不平衡轮次的截取。快照那句的出处是 packages/subagent/subagent-fork-in-process/README.zh.md 第 60 行，要单独标出来。"
+    },
+    {
+      "rule": "第 12 条（「我自己挖到的」，读者要它干嘛）",
+      "quote": "行尾那一列分上下两行，上行是持久化的 token 用量合计，下行是活跃轮次的累计耗时。耗时在子对话跑着的时候每秒加一次，变成 inactive 之后冻住。",
+      "fix": "两行小字谁上谁下、是不是每秒加一次，读者拿不到任何用处。压成一句：「每一行还带着这个子对话用掉多少 token、跑了多久。」（另：原文的条件是「仅在运行中 child 存在未结束轮次时每秒递增一次」，文章把条件也丢了。）"
+    }
+  ],
+  "emptyParagraphs": [
+    "「两种起法都只传对话内容。子对话拿到的是一个全新的扁平注册作用域，不继承父对话的工具限制，也不继承权限。」——读者读完这一段多知道了什么？只多了一个没解释的词组「扁平注册作用域」，而且它跟后文「沙箱覆盖项照抄一份」直接打架。",
+    "「能中断谁由服务判定，工具本身不带任何权限。目标可以是直接下级，也可以是更深一层的后代，判据是调用者在不在目标记录下来的祖先链上。」——「工具本身不带任何权限」是实现内部的分工，读者拿不到任何可用信息；剩下半句「可以中断更深的后代」应该并进上一段。",
+    "「末句「it does not see this conversation」是硬约束。派活的那段文字要自己把话说全，因为对面读不到这边说过什么。」——把刚刚引完的英文原样再说一遍，没有新信息。",
+    "「最后半句管的是失败怎么收场。权限不够时子对话不重试被拒的那个操作，而是把这条限制写进自己的回复交回去，由派活的那个对话决定下一步。」——同上，整段是对紧邻上方那段引文的复述。",
+    "「屏幕上能看到什么」一节的后半（行尾两行的上下顺序、耗时每秒递增、inactive 冻住）——UI 排版细节，答不出读者多知道了什么。"
+  ]
+}

@@ -1,0 +1,214 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>四选一 · 封面加正文</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --sans:"PingFang SC","Hiragino Sans GB","Noto Sans CJK SC",-apple-system,sans-serif;
+  --mono:ui-monospace,"SF Mono",Menlo,monospace;
+  --lat:-apple-system,BlinkMacSystemFont,"Helvetica Neue",Helvetica,Arial,sans-serif;
+}
+body{background:#E9E9E7;color:#111;font-family:var(--sans);-webkit-font-smoothing:antialiased}
+.page{max-width:86rem;margin:0 auto;padding:46px 26px 90px}
+.hd h1{font-size:24px;font-weight:600;margin-bottom:8px}
+.hd p{font-size:14.5px;line-height:1.75;color:#6A6D70;max-width:44em;margin-bottom:34px}
+
+.row{margin-bottom:52px;padding-bottom:44px;border-bottom:1px solid #D8D8D5}
+.row:last-child{border-bottom:0}
+.row .name{font-size:15px;font-weight:600;margin-bottom:2px}
+.row .ref{font-size:12px;color:#9A9D9F;margin-bottom:16px}
+.pair{display:grid;grid-template-columns:minmax(230px,270px) 1fr;gap:26px;align-items:start}
+@media (max-width:760px){ .pair{grid-template-columns:1fr} }
+.row .note{font-size:12.5px;line-height:1.7;color:#7A7D80;margin-top:12px;max-width:52em}
+
+/* 封面 */
+.cv{aspect-ratio:3/4;position:relative;overflow:hidden;border-radius:4px;
+  box-shadow:0 2px 6px rgba(0,0,0,.09),0 14px 34px -18px rgba(0,0,0,.3);
+  display:flex;flex-direction:column;justify-content:center;padding:11% 10%;container-type:inline-size}
+.cv .zhs{font-size:8.4cqw;font-weight:700;letter-spacing:.06em;line-height:1.1;margin-bottom:1.4cqw}
+.cv .en{font-family:var(--lat);font-size:15cqw;font-weight:700;letter-spacing:-.045em;line-height:.92;margin-bottom:4.5cqw}
+.cv .line{height:.6cqw;width:100%;margin-bottom:4.5cqw}
+.cv .sub{font-size:4.2cqw;font-weight:500}
+.cv .tail{position:absolute;left:10%;bottom:7%;font-family:var(--mono);font-size:2.5cqw}
+
+/* 正文样张 */
+.pg{border-radius:4px;padding:34px 38px 38px;position:relative;overflow:hidden;
+  box-shadow:0 2px 6px rgba(0,0,0,.07),0 14px 34px -20px rgba(0,0,0,.24);min-height:100%}
+.pg .rail{position:absolute;left:0;top:34px;width:34px;border-radius:0 7px 7px 0;
+  display:flex;flex-direction:column;align-items:center;padding:9px 0 13px;gap:10px}
+.pg .rail .no{font-size:11px;font-weight:600;opacity:.72}
+.pg .rail .t{writing-mode:vertical-rl;text-orientation:mixed;font-size:12px;font-weight:700;letter-spacing:.18em;white-space:nowrap}
+.pg .body{padding-left:52px}
+.pg h2{font-size:25px;font-weight:600;letter-spacing:-.02em;margin-bottom:20px;line-height:1.3}
+.pg p{font-size:14px;line-height:1.95;margin-bottom:14px}
+.pg h3{font-size:16px;font-weight:600;margin:22px 0 11px;position:relative}
+.pg h3::before{content:"";position:absolute;left:-19px;top:.72em;width:11px;height:2px;border-radius:2px}
+.pg code{font-family:var(--mono);font-size:.85em;padding:2px 5px;border-radius:4px}
+.pg .card{border-radius:10px;padding:14px 16px;margin:16px 0}
+.pg .card .lbl{font-size:9.5px;letter-spacing:.18em;font-weight:700;margin-bottom:9px;display:flex;align-items:center;gap:6px}
+.pg .card .lbl::before{content:"";width:5px;height:5px;border-radius:50%}
+.pg .card .r{display:flex;justify-content:space-between;font-size:13px;padding:3px 0}
+.pg .card .r span:last-child{font-family:var(--mono);font-size:12px}
+.pg a{text-decoration:none;border-bottom:1px solid}
+
+/* ═══ 1 宜家 ═══ */
+.ik .cv{background:#0058A3}
+.ik .cv .zhs{color:#FFDB00} .ik .cv .en{color:#fff}
+.ik .cv .line{background:#FFDB00} .ik .cv .sub{color:rgba(255,255,255,.9)} .ik .cv .tail{color:rgba(255,255,255,.6)}
+.ik .pg{background:#FBFBF8;color:#3A3D40}
+.ik .pg .rail{background:#0058A3;color:#FFDB00}
+.ik .pg h2,.ik .pg strong{color:#0E1116}
+.ik .pg h3{color:#0E1116} .ik .pg h3::before{background:#0058A3}
+.ik .pg code{background:#EEF1F5;color:#0E1116}
+.ik .pg .card{background:#fff;border:1px solid #E3E7EC}
+.ik .pg .card .lbl{color:#0058A3} .ik .pg .card .lbl::before{background:#FFDB00}
+.ik .pg .card .r span:first-child{color:#767B80}
+.ik .pg a{color:#0058A3;border-color:#B9CFE4}
+
+/* ═══ 2 瑞士 ═══ */
+.sw .cv{background:#fff}
+.sw .cv .zhs{color:#E30613} .sw .cv .en{color:#000}
+.sw .cv .line{background:#E30613;height:1.3cqw} .sw .cv .sub{color:#444} .sw .cv .tail{color:#A9A9A9}
+.sw .pg{background:#FFFFFF;color:#333}
+.sw .pg .rail{background:#000;color:#fff}
+.sw .pg h2,.sw .pg strong{color:#000}
+.sw .pg h3{color:#000} .sw .pg h3::before{background:#E30613}
+.sw .pg code{background:#F2F2F2;color:#000}
+.sw .pg .card{background:#fff;border:1px solid #DDD}
+.sw .pg .card .lbl{color:#E30613} .sw .pg .card .lbl::before{background:#E30613}
+.sw .pg .card .r span:first-child{color:#777}
+.sw .pg a{color:#E30613;border-color:#F5B8BC}
+
+/* ═══ 3 克莱因蓝 ═══ */
+.kb .cv{background:#002FA7}
+.kb .cv .zhs{color:#E8DCC8} .kb .cv .en{color:#fff}
+.kb .cv .line{background:#E8DCC8} .kb .cv .sub{color:rgba(255,255,255,.86)} .kb .cv .tail{color:rgba(232,220,200,.6)}
+.kb .pg{background:#FAF8F3;color:#3C3B37}
+.kb .pg .rail{background:#002FA7;color:#E8DCC8}
+.kb .pg h2,.kb .pg strong{color:#14161C}
+.kb .pg h3{color:#14161C} .kb .pg h3::before{background:#002FA7}
+.kb .pg code{background:#EFEDE6;color:#14161C}
+.kb .pg .card{background:#fff;border:1px solid #E6E2D8}
+.kb .pg .card .lbl{color:#002FA7} .kb .pg .card .lbl::before{background:#002FA7}
+.kb .pg .card .r span:first-child{color:#7A776E}
+.kb .pg a{color:#002FA7;border-color:#B9C4E4}
+
+/* ═══ 4 赭 + 靛 ═══ */
+.dh .cv{background:#EDE3D0}
+.dh .cv .zhs{color:#A44A3F} .dh .cv .en{color:#2E4A6B}
+.dh .cv .line{background:#A44A3F} .dh .cv .sub{color:#5C5346} .dh .cv .tail{color:#A79A85}
+.dh .pg{background:#F7F1E4;color:#4A4438}
+.dh .pg .rail{background:#A44A3F;color:#F7F1E4}
+.dh .pg h2,.dh .pg strong{color:#241E16}
+.dh .pg h3{color:#241E16} .dh .pg h3::before{background:#A44A3F}
+.dh .pg code{background:#EBE2CF;color:#241E16}
+.dh .pg .card{background:#FDFAF2;border:1px solid #E3D8C0}
+.dh .pg .card .lbl{color:#A44A3F} .dh .pg .card .lbl::before{background:#2E4A6B}
+.dh .pg .card .r span:first-child{color:#7E7566}
+.dh .pg a{color:#2E4A6B;border-color:#BFCBDA}
+</style></head><body>
+
+<div class="page">
+  <div class="hd">
+    <h1>四选一 · 封面加正文</h1>
+    <p>你定的宜家蓝黄，加上瑞士白黑红、克莱因蓝、赭靛。<strong>每套都配了一页真正文</strong>——封面只看一眼，正文要看 76,725 字，一套配色能不能用，看右边这一页比看左边那张准。</p>
+  </div>
+
+  <div class="row ik">
+    <div class="name">1　蓝底黄字</div>
+    <div class="ref">参考 IKEA　·　#0058A3 / #FFDB00　·　你选的这个</div>
+    <div class="pair">
+      <div class="cv"><div class="zhs">深入浅出</div><div class="en">DeepSeek<br>Harness</div>
+        <div class="line"></div><div class="sub">把 AI 拴在你电脑上的那一层</div><div class="tail">21 篇 · 76,725 字</div></div>
+      <div class="pg">
+        <div class="rail"><span class="no">09</span><span class="t">沙箱与升权</span></div>
+        <div class="body">
+          <h2>它闯祸的时候</h2>
+          <p>前面几篇它一直在按你说的做。这一篇看的是另一件事：<strong>它想干一件不该干的事的时候，谁拦得住。</strong></p>
+          <h3>先说我第一次把靶子打偏了</h3>
+          <p>头一次试，我在工作区里放了一个文件，在 <code>/tmp</code> 里放了另一个，让它两个都删。它两个都删了。</p>
+          <div class="card"><div class="lbl">三档访问模式 · 取自源码说明</div>
+            <div class="r"><span>read-only</span><span>任何位置都不可写</span></div>
+            <div class="r"><span>workspace-write</span><span>只能写工作区 + /tmp</span></div>
+            <div class="r"><span>danger-full-access</span><span>不作限制</span></div></div>
+          <p>翻开源码才发现是我的问题。完整代码在 <a href="#">github.com/deepseek-ai/deepseek-harness</a>。</p>
+        </div>
+      </div>
+    </div>
+    <p class="note">蓝底黄字在封面上最抢眼。正文里那道蓝竖条很精神，但黄色几乎用不上——它在浅底上对比度太低，做不了小标题也做不了链接，只能缩在卡片标签那个小圆点上。等于两个主色到了正文只剩一个。</p>
+  </div>
+
+  <div class="row sw">
+    <div class="name">2　白底黑字，一道红</div>
+    <div class="ref">参考 瑞士国际主义　·　#FFFFFF / #000000 / #E30613</div>
+    <div class="pair">
+      <div class="cv"><div class="zhs">深入浅出</div><div class="en">DeepSeek<br>Harness</div>
+        <div class="line"></div><div class="sub">把 AI 拴在你电脑上的那一层</div><div class="tail">21 篇 · 76,725 字</div></div>
+      <div class="pg">
+        <div class="rail"><span class="no">09</span><span class="t">沙箱与升权</span></div>
+        <div class="body">
+          <h2>它闯祸的时候</h2>
+          <p>前面几篇它一直在按你说的做。这一篇看的是另一件事：<strong>它想干一件不该干的事的时候，谁拦得住。</strong></p>
+          <h3>先说我第一次把靶子打偏了</h3>
+          <p>头一次试，我在工作区里放了一个文件，在 <code>/tmp</code> 里放了另一个，让它两个都删。它两个都删了。</p>
+          <div class="card"><div class="lbl">三档访问模式 · 取自源码说明</div>
+            <div class="r"><span>read-only</span><span>任何位置都不可写</span></div>
+            <div class="r"><span>workspace-write</span><span>只能写工作区 + /tmp</span></div>
+            <div class="r"><span>danger-full-access</span><span>不作限制</span></div></div>
+          <p>翻开源码才发现是我的问题。完整代码在 <a href="#">github.com/deepseek-ai/deepseek-harness</a>。</p>
+        </div>
+      </div>
+    </div>
+    <p class="note">纯黑竖条加纯白底，对比最强，正文最清楚。红只出现在小标题的短杠和链接上，用量极省。缺点是白得有点冷，长时间读比暖白底刺眼，而且黑竖条在页面上略重。</p>
+  </div>
+
+  <div class="row kb">
+    <div class="name">3　克莱因蓝 + 象牙</div>
+    <div class="ref">Yves Klein　·　#002FA7 / #E8DCC8</div>
+    <div class="pair">
+      <div class="cv"><div class="zhs">深入浅出</div><div class="en">DeepSeek<br>Harness</div>
+        <div class="line"></div><div class="sub">把 AI 拴在你电脑上的那一层</div><div class="tail">21 篇 · 76,725 字</div></div>
+      <div class="pg">
+        <div class="rail"><span class="no">09</span><span class="t">沙箱与升权</span></div>
+        <div class="body">
+          <h2>它闯祸的时候</h2>
+          <p>前面几篇它一直在按你说的做。这一篇看的是另一件事：<strong>它想干一件不该干的事的时候，谁拦得住。</strong></p>
+          <h3>先说我第一次把靶子打偏了</h3>
+          <p>头一次试，我在工作区里放了一个文件，在 <code>/tmp</code> 里放了另一个，让它两个都删。它两个都删了。</p>
+          <div class="card"><div class="lbl">三档访问模式 · 取自源码说明</div>
+            <div class="r"><span>read-only</span><span>任何位置都不可写</span></div>
+            <div class="r"><span>workspace-write</span><span>只能写工作区 + /tmp</span></div>
+            <div class="r"><span>danger-full-access</span><span>不作限制</span></div></div>
+          <p>翻开源码才发现是我的问题。完整代码在 <a href="#">github.com/deepseek-ai/deepseek-harness</a>。</p>
+        </div>
+      </div>
+    </div>
+    <p class="note">封面最强的一个。正文用的是象牙暖白底，那个蓝在浅底上做小标题短杠和链接都够深、对比够。只有一个主色，从封面一路用到链接，全书是一套语言。缺点是蓝太纯，跟书里五张蓝灰截图容易混。</p>
+  </div>
+
+  <div class="row dh">
+    <div class="name">4　赭 + 靛</div>
+    <div class="ref">敦煌壁画矿物颜料　·　#EDE3D0 / #A44A3F / #2E4A6B</div>
+    <div class="pair">
+      <div class="cv"><div class="zhs">深入浅出</div><div class="en">DeepSeek<br>Harness</div>
+        <div class="line"></div><div class="sub">把 AI 拴在你电脑上的那一层</div><div class="tail">21 篇 · 76,725 字</div></div>
+      <div class="pg">
+        <div class="rail"><span class="no">09</span><span class="t">沙箱与升权</span></div>
+        <div class="body">
+          <h2>它闯祸的时候</h2>
+          <p>前面几篇它一直在按你说的做。这一篇看的是另一件事：<strong>它想干一件不该干的事的时候，谁拦得住。</strong></p>
+          <h3>先说我第一次把靶子打偏了</h3>
+          <p>头一次试，我在工作区里放了一个文件，在 <code>/tmp</code> 里放了另一个，让它两个都删。它两个都删了。</p>
+          <div class="card"><div class="lbl">三档访问模式 · 取自源码说明</div>
+            <div class="r"><span>read-only</span><span>任何位置都不可写</span></div>
+            <div class="r"><span>workspace-write</span><span>只能写工作区 + /tmp</span></div>
+            <div class="r"><span>danger-full-access</span><span>不作限制</span></div></div>
+          <p>翻开源码才发现是我的问题。完整代码在 <a href="#">github.com/deepseek-ai/deepseek-harness</a>。</p>
+        </div>
+      </div>
+    </div>
+    <p class="note">唯一有三个色可用的：土黄底、赭色管标题和竖条、靛蓝管链接和数据。正文里颜色分工最清楚，暖底看久了也最不累。缺点是封面偏淡，缩成小图不如另外三个跳。</p>
+  </div>
+
+</div>
+</body></html>

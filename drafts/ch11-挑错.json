@@ -1,0 +1,130 @@
+{
+  "no": "11",
+  "title": "连主循环都能换掉",
+  "verdict": "需修",
+  "factErrors": [
+    {
+      "claim": "「另外 4 个是插件能真正插手的位置，其中 3 个允许监听器改写要送出去的内容，或者直接拦下不放行。」",
+      "problem": "把 pre-step 一个事件的性质安到全部 3 个 waterfall 头上。数字 12/8/3/1 我数过，全对（core.zh.md:739-1002，8 emit + 3 waterfall + 1 serial），错的是对这 3 个的描述。",
+      "truth": "只有 agent/pre-step 同时具备「改写内容」和「拦下」（core.zh.md:875「Reject a proposed step or replace the messages that enter it」）。agent/request（:900）文档原文明写「this waterfall cannot mutate messages」，它只能替换 LlmCallConfig，且必须返回一个 config，拦不下来。agent/request-error（:926）是失败后返回 { kind: 'retry' } 或委托，既不改写送出的内容也不拦截。改法：只说 pre-step 能改写和拒绝，另外两个分别是「换掉这次调用的配置」和「接住失败、决定要不要重试」。"
+    },
+    {
+      "claim": "「新写的循环若不发这个事件，这 13 个包的监听器一次也不会被调用」",
+      "problem": "漏了限定词。这 13 个包不是只挂 pre-step。",
+      "truth": "以 goal-round-driver 为例，packages/goal/goal-round-driver/src/index.ts 里除了 :349 的 agent/pre-step，还注册了 agent/error(:246)、agent/created(:251)、agent/disposed(:252)、agent/session-start(:253)、agent/status(:259)、goal/changed(:278)、agent/inbox/inserted(:284)、agent/inbox/claimed(:292)、agent/inbox/discarded(:299)、session/event(:307) 共 10 个别的监听器。应改成「这 13 个包挂在 pre-step 上的那一个监听器」。"
+    },
+    {
+      "claim": "「替换因此分成两步：agent-loop 那条标上 disabled: true，新条目用 insert 加进去。这两步产品自己就在用。」后面只给了 hmr 的例子",
+      "problem": "hmr 只演示了第一步。web-app/cordis.patch.yml:22-23 和 headless/cordis.patch.yml:14-15 都只有 disabled: true，没有任何 insert 补上一个替代品。用它当「这两步」的证据，是把半个例子说成整个。",
+      "truth": "仓库里真有 disable+insert 成对替换的现成例子，作者没找到：examples/acp-agent/cordis.snapshot.yml 第 19-21 行把 llm-deepseek 标 disabled: true，第 48-50 行 insert 一条 id: llm-replay / name: '@deepseek-ai/dsh-llm-replay'，文件开头第 1-2 行的注释就写着「disables the key-requiring DeepSeek adapter, and inserts llm-replay」。换成这个例子论点才成立，而且更贴题——那正是把一个具体实现整个换掉。"
+    },
+    {
+      "claim": "「可它的 package.json 里搜不到 agent-loop，只有接口包 @deepseek-ai/dsh-agent。」",
+      "problem": "「只有」是错的。",
+      "truth": "packages/bundle/headless/package.json 的 peerDependencies 有 7 条：cordis-plugin-loader、dsh-agent、dsh-agent-default-model、dsh-invariants、dsh-llm、dsh-session、cordis；另有 4 条 dependencies（dsh-cmdline、dsh-code-runtime-worker-thread、schemastery、commander）。其中 dsh-agent-default-model 同样是 agent 相关的包。改成「搜不到 agent-loop，它写的是接口包 @deepseek-ai/dsh-agent」，去掉「只有」。"
+    },
+    {
+      "claim": "「.agents/notes/ 下两份记录写了同一个否决理由」",
+      "problem": "路径不完整，按这个路径找不到文件；而且两份否决的不是同一个提案。",
+      "truth": "真实路径是 .agents/notes/implemented/feature/。另外 same-session-goal-round-driver.zh.md:78 否决的是「在 dsh-agent-loop 内添加目标循环」，persisted-same-session-goal-domain.zh.md:47 否决的是「向 dsh-agent-loop 添加目标状态或通用循环抽象」——两个不同的提案，理由措辞也不同（前者「赋予某种策略特权」，后者「赋予默认循环实现特权」）。改成「两份记录用相近的理由否决了两个不同的提案」。"
+    },
+    {
+      "claim": "「代价记在同一份记录第 87 行：主循环为此『只新增一个通用的「取消前观察」通知』」",
+      "problem": "把「后果」栏里的一句好话读成了代价。",
+      "truth": "第 87 行在 ## 后果 一节下，原文是「目标继续执行仍是可移除插件，具体循环只新增一个通用的『取消前观察』通知。」——记录方是当好结果写的（插件可移除、循环几乎没动）。行号和引文都对，错的是「代价」这个框。"
+    },
+    {
+      "claim": "「同一个进程里挂第二个，agent/src/index.ts 第 374 行直接抛错」",
+      "problem": "作用域说错了一级。",
+      "truth": "第 374 行的判断是 if (this.factory !== undefined)，this 是 AgentRegistry 这个服务实例，边界是「同一个注册表」而不是「同一个进程」。同文件 :392 的 if (this.factory === undefined) throw new Error(NO_FACTORY_MESSAGE) 也是同一个实例上的槽位。改成「同一个注册表里挂第二个」。"
+    },
+    {
+      "claim": "「packages/core/agent-loop/README.zh.md 第 76 行：『超出「调用模型、运行工具、重复」的所有内容，都属于监听事件分类体系的插件。』」",
+      "problem": "改了标点，也就改了这句话的身份。",
+      "truth": "第 76 行原文结尾是冒号，不是句号——它是一个列表的抬头，下面紧跟五条（钩子与策略／压缩／模型请求恢复／沙箱、权限、计划模式等）。引成句号，读者会以为这是一句独立断言。要么原样带冒号并说明后面跟着五类，要么不用引号改述。"
+    },
+    {
+      "claim": "「有 25 个包把它列在 devDependencies 里，那是跑测试时才装的。」",
+      "problem": "25 这个数我数过，对（全量扫 packages/*/*/package.json 的 devDependencies）。用法也确实在测试里（compaction-basic/tests/、plan-mode/tests/integration.spec.ts 都是）。问题在「跑测试时才装」这个说法本身，以及两组数字的重叠没交代。",
+      "truth": "devDependencies 是开发时一次装齐的，不是跑测试那一刻才装。另外 packages/examples/agent-spine-demo 同时出现在「运行时依赖的 2 个」和这 25 个里，两组不互斥。改成「那是开发和跑测试才用得上的，装给使用者的包里没有它」。"
+    },
+    {
+      "claim": "「它所在的整个包，源码 6 个文件、1643 行。」",
+      "problem": "6 个文件、1643 行我核过，一字不差（agent.ts 496 + constants.ts 6 + index.ts 713 + invariant.ts 63 + runtime-context.ts 76 + tool-calls.ts 289）。但「整个包」这个词会让读者接收到一个错误的体量印象。",
+      "truth": "同一个包的 tests/ 目录是 20 个文件、10512 行，是 src 的六倍多。写「整个包」而只报 src 的数，读者会以为这个包总共就一千六百行。去掉「整个」，写「这个包的源码是 6 个文件 1643 行」。"
+    },
+    {
+      "claim": "「新写的循环若不发这个事件……而且不会有任何报错。」",
+      "problem": "一句无来源的否定断言。",
+      "truth": "我查过 packages/core/agent-loop/src/invariant.ts（只校验 llm/stream 上 loop 造出来的请求是否冻结、能否从会话日志重建）和 packages/core/agent/src/invariant.ts，确实没有任何一处检查 pre-step 是否发出过——这句结论碰巧成立。但按事实纪律第 3 条，这类「不会有 X」的断言要么写出你查过哪里，要么不写。"
+    }
+  ],
+  "ruleViolations": [
+    {
+      "rule": "第 11 条（分清 harness 与 DeepSeek Harness）",
+      "quote": "同一份文档第 7 行还说，这是整个 harness 里唯一含有具体循环逻辑的包。",
+      "fix": "README 第 7 行里的「harness」指的就是 dsh 这一个产品，不是这一类东西。写成「整个 harness 里」，读者会当成「所有 harness 里只有它有循环逻辑」。改：「同一份文档第 7 行还说，DeepSeek Harness 里只有这一个包装着具体的循环逻辑。」"
+    },
+    {
+      "rule": "第 10 条（先讲明白再贴标签，一段最多欠一个新词）",
+      "quote": "「超出『调用模型、运行工具、重复』的所有内容，都属于监听事件分类体系的插件。」",
+      "fix": "「监听事件分类体系」在第二段就砸给读者，而「事件」是什么、循环怎么往外发事件，要到七节之后的「13 个包挂在同一个钩子上」才讲。这一段同时欠了「插件」和「事件」两个词。改法：引这句时当场补一句大白话——「循环转的时候会往外报告自己走到哪了，别的代码接住这些报告，把自己的活儿插进去」，再引原文；或者把这句引文整个挪到讲事件那一节。"
+    },
+    {
+      "rule": "第 10 条（同上）",
+      "quote": "<span class=\"tag\">工厂</span>……<code>AgentFactory</code> 只有两个方法",
+      "fix": "「工厂」是编程行话，正文从头到尾没解释过。给标签配一句大白话：造 agent 的那个东西，只有两个动作——新建一个，或者从磁盘上的旧会话里接着跑。"
+    },
+    {
+      "rule": "第 14 条（讲东西，别讲这篇文章）",
+      "quote": "这种话写在文档里是宣称，能不能在依赖关系里查出来是另一回事。",
+      "fix": "这句给的是「作者打算怎么查证」的信息，不是关于东西的信息。删掉，直接进事实：「219 个包的依赖表里，把 @deepseek-ai/dsh-agent-loop 列为运行时依赖的只有两个。」"
+    },
+    {
+      "rule": "第 14 条（同上）",
+      "quote": "packages/bundle/headless 是个现成的对照。",
+      "fix": "「对照」说的是这句话在文章里担任什么角色。删掉这半句，直接说事：「packages/bundle/headless 是『给一句话，跑完退出』的那个入口，全程都要靠主循环转起来才有结果，可它的 package.json 里搜不到 agent-loop。」"
+    },
+    {
+      "rule": "第 14 条（同上）",
+      "quote": "架构文档把这件事写成了一句判断。",
+      "fix": "「这件事」没有明确指代——上一段刚说完条目顺序不携带语义。而且这句只交代下面要引一段话。删掉，直接引：「docs/architecture.zh.md 第 13 行：」"
+    },
+    {
+      "rule": "另外三条·段末总结金句",
+      "quote": "这等于在主循环外面又套了一圈循环。",
+      "fix": "上一句刚给完「目标 → Goal Round → 轮次 → 步骤」的层次，这句只是把它换成漂亮说法再说一遍，不给新信息。删掉。"
+    },
+    {
+      "rule": "另外三条·段末总结金句",
+      "quote": "外部代码碰不到这个类，也就没法给它打补丁。",
+      "fix": "「碰不到这个类」上一句已经说完（不在导出里、没有直通源码目录的口子）。后半句是替读者把结论下掉，而且「没法打补丁」是个绝对断言。删掉后半句，或换成有信息量的对照：agent-spine-demo 的 package.json 就开了 \"./src/*\": \"./src/*\" 这个口子，agent-loop 没开。"
+    },
+    {
+      "rule": "第 1 条（主语是事物，不是「你该做什么」）",
+      "quote": "<h3>换掉它要写三样东西</h3>",
+      "fix": "隐含主语是「你／开发者」，是一句指示。改成事物做主语：「一个替代实现要凑齐的三样东西」或「替代实现要接上的三处」。"
+    },
+    {
+      "rule": "第 12 条（我自己挖到的，读者要它干嘛）",
+      "quote": "上一条是 system-prompt（提示词组装），下一条是 fs-sandbox（文件系统）。排在倒数第三不代表什么——",
+      "fix": "报了两个邻居的名字，紧接着自己说位置不代表什么，读者拿这两个包名没有用处。真正值钱的那层意思没写出来：主循环在这份清单里跟提示词组装、文件系统长得一模一样，同样是一行 id 加一个包名，没有任何特殊待遇。要么补上这句，要么整段删。"
+    },
+    {
+      "rule": "第 10 条延伸（术语一词两义）",
+      "quote": "<h3>13 个包挂在同一个钩子上</h3>……Claude Code 和 Codex 两个钩子桥接",
+      "fix": "同一节里「钩子」指了两个东西：一个是 agent/pre-step 这个事件，一个是 hooks-claude-code / hooks-codex 这两个包。读者会以为那 13 个包都叫「钩子」。小标题改成「13 个包挂在同一个事件上」，或把 hooks 两个包改叫「Claude Code 和 Codex 的两座桥」。"
+    },
+    {
+      "rule": "另外三条·跨篇引用必须自带上下文（每篇独立成文）",
+      "quote": "全篇「插件」出现约二十次，从未解释",
+      "fix": "这一篇的全部论证都建立在「插件」上，可正文一次也没给过大白话解释，也没有按路标方式引到讲插件架构的那一篇。至少在第二段第一次用到时补一句机制描述（一块能单独挂上去、也能单独摘下来的代码，摘下来时它注册过的东西一起撤销——这句架构文档第 13 行原文就有），再用「插件」这个词。"
+    }
+  ],
+  "emptyParagraphs": [
+    "「上一条是 system-prompt（提示词组装），下一条是 fs-sandbox（文件系统）。排在倒数第三不代表什么——这份文件开头第 12 行的注释写着，条目顺序不携带加载语义，激活由服务可用性驱动，分组只是给读者看的。」——读完这段读者多知道了什么？两个包名，外加「这两个包名不说明任何问题」。行号和引文我都核过（base/cordis.patch.yml:429、:443、:12-13，全对），但信息自己把自己抵消了。要留就得把落点写出来：主循环在清单里的写法跟旁边两条完全一样，一行 id 一行包名，没有任何特殊标记。",
+    "「这种话写在文档里是宣称，能不能在依赖关系里查出来是另一回事。」——整段只有这一句作为小节开头，给的是作者的查证打算，读者关于「东西」多知道的是零。",
+    "「架构文档把这件事写成了一句判断。」——独立成句，只起承接作用；「这件事」指代不明（前一段谈的是条目顺序无语义）。删掉不损失任何信息。",
+    "「仓库把这条写成了硬约束。根目录 AGENTS.md 第 108 行要求：新行为放到有文档记录的扩展点上，改动 agent-loop 就必须同步更新 docs/architecture.md。」——引文和行号都对（AGENTS.md:108 原文「Plugins, not loop changes: new behavior goes on documented extension points; changing agent-loop requires updating docs/architecture.md.」），但「这条」接的是上一段「不发 pre-step 会静默废掉 13 个包」，而 AGENTS.md 这句一个字也没提 pre-step，它管的是「改动 agent-loop」而不是「换掉 agent-loop」，跟整节的主题（换掉它）方向相反。这是把两件都存在的事实硬接在一起。要么补上这条约束跟前一段的真实关系，要么整段删。"
+  ]
+}

@@ -1,0 +1,124 @@
+{
+  "no": "12",
+  "title": "桌子就这么大",
+  "verdict": "需修",
+  "factErrors": [
+    {
+      "claim": "「检查发生在每一步开始之前——一轮对话里模型每叫一次工具算一步」",
+      "problem": "step 的定义写反了。这还跟第 3 篇已经讲过的 turn/step 冲突（第 3 篇引的就是 architecture.md）。",
+      "truth": "docs/architecture.md 第 65 行：「A **step** is one model request plus the tools it calls.」一步 = 一次模型请求 + 这次请求叫的所有工具。一次请求并行叫三个工具，仍然是一步；一次请求一个工具都没叫，也是一步。改法：「模型每发一次请求、连同这次请求叫的工具，算一步」。"
+    },
+    {
+      "claim": "「仓库里有两个包专管这件事。packages/spill 负责……packages/compaction 负责……」",
+      "problem": "数错了。这两个是目录，不是包。",
+      "truth": "packages/spill 下有 3 个包（spill、spill-local、spill-policy），packages/compaction 下有 4 个（compaction、compaction-basic、compaction-tool-result-pruner、command-compact），共 7 个。每个子目录都有自己的 package.json，packages/spill 和 packages/compaction 本身没有。改法：「仓库里有两组包专管这件事」，或直接点名 spill-policy 和 compaction-basic。"
+    },
+    {
+      "claim": "「read 工具是唯一被明确排除的。」",
+      "problem": "「唯一」不成立，而且另一条分支里 read 恰恰不被排除。",
+      "truth": "packages/spill/spill-policy/src/index.ts 第 196-197 行的同一个条件还排除了嵌套执行（exec.parent !== undefined）、已带 value 的决策、以及一切非 accept 决策；README.zh.md「行为」第 2 条把四种跳过并列写着。更要紧的是第 217-230 行的 dispatch-log 分支，第 219-221 行的注释明说 read 子调用照样 spill（「read 恰恰是最容易产生巨型日志的工具」）。"
+    },
+    {
+      "claim": "「（packages/client/ui-conversation/src/client/skeleton/ContextMeter.tsx，文案在同目录 locales.ts 第 52 到 56 行）」",
+      "problem": "「同目录」是错的。",
+      "truth": "ContextMeter.tsx 在 src/client/skeleton/，locales.ts 在 src/client/，差一层。ContextMeter.tsx 也根本不 import locales.ts，t 是当 prop 传进来的（第 36-37 行）。行号 52-56 本身没错。"
+    },
+    {
+      "claim": "「自动路径会把这个异常接住，记一条警告，然后带着超预算的完整历史把这一轮跑完（index.ts 第 155 到 162 行）。」",
+      "problem": "「完整历史」在这个场景里不成立。异常是在剪枝已落地、两轮摘要替换也已落地之后才抛的。",
+      "truth": "compaction-basic/README.zh.md 第 166 行把「携带完整超预算历史继续」限定在「任何替换前」，紧接着写：「如果剪枝已落地，后续摘要失败会从该持久剪枝表层继续。」改法：「带着仍然超预算的那份历史把这一轮跑完」。"
+    },
+    {
+      "claim": "「/compact 命令注册在命令面板里」",
+      "problem": "「命令面板」这个东西仓库里不存在——全仓 grep 不到「命令面板」「command palette」「CommandPalette」。",
+      "truth": "它注册在 ctx.commands 这个命令注册表上（packages/interaction/commands），每个命令适配器都能发现。Web 端把它挂在输入框的一个按钮后面，那个按钮的中文标签是「命令」（locales.ts:23 'input.commands': '命令'，用在 InputBar.tsx:734）。"
+    },
+    {
+      "claim": "「停住那条以后的全部保留原样，之前的全部压掉。」",
+      "problem": "差一格。停住那条本身是保留的，不是压掉的。",
+      "truth": "region.ts 第 131 行 const cutoff = surfaceNodes[keepFromIdx - 1]，压缩区间的末端是停住那条的前一条。改法：「停住那条连同它之后的全部保留原样，再往前的全部压掉」。"
+    },
+    {
+      "claim": "「失败的尝试同样会显示，那一格变成 Compaction failed（layout.ts 第 314 行）。」",
+      "problem": "两处不准。一是取值顺序，二是换了一个界面却没交代。",
+      "truth": "第 314 行是 request.error ?? 'Compaction failed'——有具体错误文本时显示的是那条错误，Compaction failed 只是兜底。另外这一格在轨迹视图（ui-trajectory），前两句说的是对话流（ui-conversation），中间没有过渡。轨迹里运行中的文案也是英文 'Compacting context…'，不是对话流那句「正在压缩…」。"
+    },
+    {
+      "claim": "「剪枝按 Unicode 码点切，不会把一个字符切成两半」",
+      "problem": "多说了半句。码点切只保证不拆代理项对。",
+      "truth": "compaction-tool-result-pruner/src/index.ts 第 78-79 行注释：「Grapheme clusters may still split.」README.zh.md 第 62 行单列成一条限制：「字素簇可能被拆分：按码点切片可保护代理项对，但不会执行感知区域设置的字素簇分割。」带修饰符的 emoji、组合字符序列照样会被切开。"
+    },
+    {
+      "claim": "「摘要是一次单独的模型调用，走的是跟正常对话同一个接口。」",
+      "problem": "「同一个接口」会让人以为走的是同一条链路。",
+      "truth": "compaction-basic/README.zh.md 第 20 行：「直接 llm/stream 调用……而不运行仅用于 agent loop 的 agent/request 扩展点。」底层是同一个 llm/stream，但绕开了正常对话要过的那个扩展点。"
+    },
+    {
+      "claim": "「把摘要器配到另一个提供方或另一个模型，这份复用就作废了。」",
+      "problem": "漏了一种情况。",
+      "truth": "README.zh.md 第 156 行原文列了三种：「将摘要器路由到不同提供方／模型，或压缩非头部范围，都会放弃该复用。」"
+    }
+  ],
+  "ruleViolations": [
+    {
+      "rule": "三·段末总结金句",
+      "quote": "摘要比原文还长的情况，落不了地。",
+      "fix": "删。前一句「只要它不比被遮住的那段更短，就直接抛错」已经把事说完了，这句只是替读者把结论再下一遍，而且还说漏了「一样长也不行」。"
+    },
+    {
+      "rule": "三·段末总结金句",
+      "quote": "压掉的永远是最旧的那一头。",
+      "fix": "删。同段前面已经说了「停住那条以后的全部保留原样，之前的全部压掉」。"
+    },
+    {
+      "rule": "三·段末总结金句",
+      "quote": "压缩之后往上翻，被压掉的内容原样还在。缩掉的只有下一次发给模型的那一份。",
+      "fix": "删后一句。前一句加上小标题「日志里一条都没少」，这个意思已经出现第三遍了。"
+    },
+    {
+      "rule": "三·段末总结金句",
+      "quote": "环里显示 79%，不代表压缩下一步就会触发。",
+      "fix": "删，或者换成具体的：79% 读的是 projectedTokens，压缩读的是 measure()，两个数在同一时刻可以差多少——给得出差值就留，给不出就删。现在这句只是把前面「读的还不是同一个数」再说一遍。"
+    },
+    {
+      "rule": "十三·不解释读者本来就会的事",
+      "quote": "低估的意思是，一段中文对话真正占掉的词元，比这套估算给出的数字多。",
+      "fix": "删。「低估」对成年人不需要解释。要补信息就补真数字：中文按 4 字符 1 词元估，实际差多少倍。给不出就整句删。"
+    },
+    {
+      "rule": "十三·不解释读者本来就会的事",
+      "quote": "鼠标停上去显示「上下文已用 45%」，点开是一个面板，把当前占用拆成……",
+      "fix": "「鼠标停上去」「点开」是常识动作。改成「悬停给出「上下文已用 45%」；展开的面板把当前占用拆成系统提示词、工具、对话消息三段……」，把字数留给「显示什么」。"
+    },
+    {
+      "rule": "十四·讲东西别讲这篇文章（兼第八条·不预告）",
+      "quote": "触发时机和阈值都是配置里的具体数字，可以改，出厂各有一套默认值。",
+      "fix": "删。整句没有一个数字，作用只是告诉读者「后面要讲数字了」。数字后面每一节都给了。"
+    },
+    {
+      "rule": "三·跨篇引用必须自带上下文",
+      "quote": "标题《桌子就这么大》",
+      "fix": "这个比喻出自第 2 篇（ch02.md:61「可以把它想成一张桌子。桌面就这么大，新材料铺上来，旧的就得收走」），但本篇正文一次都没提桌子，标题的比喻在篇内没有落点。要么正文第一段把桌子原样带回来（第 2 篇那句可以直接引），要么换一个自足的标题。"
+    },
+    {
+      "rule": "三·跨篇引用必须自带上下文（兼第十条·一段最多欠一个新词）",
+      "quote": "第 2 篇说的「模型一次能读多少字，是有上限的」，一百万词元就是这里的那个上限。",
+      "fix": "引语带对了，但「词元」这个单位没带。全篇「词元」出现十几次，从这一句起就没解释过；第 2 篇原话的下半句「这个上限叫**上下文窗口**」也没带过来。在这一句后补一句大白话（模型不是按字数算，是按切碎后的小块算，这个小块叫词元），或者第一次出现时改成「一百万个词元（模型把文字切碎后的计数单位）」。"
+    },
+    {
+      "rule": "四·5 推论句 / 不要把两件事用因果连起来",
+      "quote": "整个剪枝过程不发起任何模型调用，也就不产生额外费用和等待。",
+      "fix": "「也就」后面那半句仓库里没有出处。compaction-basic/README.zh.md 第 99 行只写了「不依赖模型的剪枝可以完全避免辅助调用」。删掉后半句，或者只保留「不发起任何模型调用」。"
+    },
+    {
+      "rule": "四·1 每一处事实断言必须能指到源头",
+      "quote": "/compact 命令注册在命令面板里",
+      "fix": "「命令面板」全仓搜不到。改成「注册在 ctx.commands 这个命令注册表上，Web 端在输入框旁边的「命令」按钮里」，并给出 packages/interaction/commands 与 InputBar.tsx:734。"
+    }
+  ],
+  "emptyParagraphs": [
+    "「仓库里有两个包专管这件事。packages/spill 负责把太大的东西挪出对话，packages/compaction 负责在快满的时候把旧的部分压掉。触发时机和阈值都是配置里的具体数字，可以改，出厂各有一套默认值。」——读者读完多知道两个目录名，而这两个目录名后面每一节都会再报一遍；第三句零信息。第一句本身还是错的（是两个目录、七个包）。整段可删，或压成一句带真数字的话。",
+    "「末尾那句取回指引是后端给的固定文案，写在 packages/spill/spill-local/src/index.ts 第 60 行。模型要看被省掉的中段，就拿 read 按行号去读那个路径，或者拿 grep 在里面搜关键词。」——中间那句是上面 pre 块里那行英文的直译，读者刚看完原文。只保留出处 + 最后一句「全文一直在硬盘上，只是不再跟着每一次请求重发一遍」即可。",
+    "「压缩指令要求模型输出固定的八个小节，一节都不许少，空的写 (none)」这一段本身站得住，但紧跟它的 pre 块只列了八个标题，把仓库里每个标题下面那行方括号说明（summarizer.ts 第 37、40、43、46、49、52、55、58 行）全砍了。八个光秃秃的英文标题对中文读者接近零信息——要么补上每节要写什么，要么整块删掉、只在正文里点出八节的名字。"
+  ]
+}

@@ -1,0 +1,75 @@
+<article class="chapter">
+  <div class="rail"><span class="no">11</span><span class="t">无特权内核</span></div>
+  <h2>连主循环都能换掉</h2>
+
+  <p>软件接到一个任务之后，总有一段代码在反复做同一件判断：手上的活还欠着吗？欠着，就再叫一次模型；不欠了，就停。这段反复执行的代码叫<strong>主循环</strong>。DeepSeek Harness 里它有确切位置——<code>packages/core/agent-loop/src/agent.ts</code>，第 64 行到第 496 行，一个叫 <code>ReactLoopAgent</code> 的类，433 行。它所在的整个包，源码 6 个文件、1643 行。</p>
+
+  <p>这 433 行管的范围，包自己的说明文档划得很死。<code>packages/core/agent-loop/README.zh.md</code> 第 76 行：「超出『调用模型、运行工具、重复』的所有内容，都属于监听事件分类体系的插件。」同一份文档第 7 行还说，这是整个 harness 里唯一含有具体循环逻辑的包。</p>
+
+  <p>包外面拿不到 <code>ReactLoopAgent</code> 这个类。它没有出现在 <code>src/index.ts</code> 的导出里，包的 <code>package.json</code> 只开放了三个入口（主入口、一个 <code>invariant</code> 检查入口、<code>package.json</code> 自己），没有直通源码目录的口子。外部代码碰不到这个类，也就没法给它打补丁。</p>
+
+  <div class="data">
+    <div class="lbl">主循环这一个包</div>
+    <div class="rows">
+      <div class="row"><span class="k">包名</span><span class="v">@deepseek-ai/dsh-agent-loop</span></div>
+      <div class="row"><span class="k">循环本体</span><span class="v">agent.ts 第 64–496 行，433 行</span></div>
+      <div class="row"><span class="k">整包源码</span><span class="v">6 个文件，1643 行</span></div>
+      <div class="row"><span class="k">在基础配置清单里</span><span class="v">78 条里的第 76 条</span></div>
+      <div class="row"><span class="k">运行时依赖它的包</span><span class="v">219 个包里的 2 个</span></div>
+    </div>
+  </div>
+
+  <h3>配置清单里的第 76 条</h3>
+
+  <p>DeepSeek Harness 启动时读一份条目清单，每条写明一个 id 和一个包名，挂载哪些东西就由这份清单决定。基础那一层的清单在 <code>packages/bundle/base/cordis.patch.yml</code>，一共 78 条。主循环是第 76 条，在第 436 到 439 行：</p>
+
+<pre><code>- id: agent-loop
+  name: '@deepseek-ai/dsh-agent-loop'
+  config:
+    agents: []</code></pre>
+
+  <p>上一条是 <code>system-prompt</code>（提示词组装），下一条是 <code>fs-sandbox</code>（文件系统）。排在倒数第三不代表什么——这份文件开头第 12 行的注释写着，条目顺序不携带加载语义，激活由服务可用性驱动，分组只是给读者看的。</p>
+
+  <p>架构文档把这件事写成了一句判断。<code>docs/architecture.zh.md</code> 第 13 行：</p>
+
+  <blockquote><p>不存在需要打补丁的特权内核：扩展 dsh 的方式是把插件挂载到其他插件旁边，而各项注册都是副作用，会在其插件卸载时撤销。</p></blockquote>
+
+  <p>上面第 11 行点了名：「产品的每一部分都是插件，包括模型适配器、工具注册表、会话日志，以及 agent loop（智能体循环）本身，因此每一部分都可以从配置替换。」</p>
+
+  <h3>219 个包里，2 个依赖它</h3>
+
+  <p>这种话写在文档里是宣称，能不能在依赖关系里查出来是另一回事。219 个包的依赖表中，把 <code>@deepseek-ai/dsh-agent-loop</code> 列为运行时依赖的只有两个：<code>packages/bundle/base</code>，也就是把它写进上面那份清单的组合包；以及 <code>packages/examples/agent-spine-demo</code>，一个在代码里手工搭插件树的示例。有 25 个包把它列在 <code>devDependencies</code> 里，那是跑测试时才装的。</p>
+
+  <p><code>packages/bundle/headless</code> 是个现成的对照。它是「给一句话，跑完退出」的那个入口，全程都要靠主循环转起来才有结果，可它的 <code>package.json</code> 里搜不到 <code>agent-loop</code>，只有接口包 <code>@deepseek-ai/dsh-agent</code>。它的 <code>src/index.ts</code> 第 111 行调的是 <code>agents.create({...})</code>：向注册表要一个 agent，注册表再去问当时挂着的是哪个实现。</p>
+
+  <h3>换掉它要写三样东西</h3>
+
+  <div class="trace">
+    <div class="t"><span class="tag">接口</span><p><code>packages/core/agent/src/runtime-types.ts</code> 第 64 到 144 行定义了 <code>Agent</code>：6 个只读属性（id、模型选项、会话、收件箱、状态、上下文）加 7 个方法（取消、等空闲、跑维护任务、投递消息、追问、中途插话、注入上下文）。新循环要把这 13 项全部实现。</p></div>
+    <div class="t"><span class="tag">工厂</span><p><code>packages/core/agent/src/index.ts</code> 第 183 行的 <code>AgentFactory</code> 只有两个方法：<code>createAgent</code> 新建，<code>resume</code> 从磁盘上已有的会话恢复。替代实现要在插件启动时调一次 <code>ctx.agents.setFactory(this)</code>，把自己交给注册表——现在这行在 <code>packages/core/agent-loop/src/index.ts</code> 第 350 行。</p></div>
+    <div class="t"><span class="tag">配置</span><p><code>agent-loop</code> 那一条标成停用，另插一条指向新包的条目。那一条的包名本身改不动。</p></div>
+  </div>
+
+  <p>工厂这个位置只有一个。同一个进程里挂第二个，<code>agent/src/index.ts</code> 第 374 行直接抛错：<code>an agent factory is already registered</code>。一个都不挂，创建 agent 时报的是第 217 行那句：<code>no agent factory registered (load an agent-loop plugin)</code>。这句话让人去载入一个 agent-loop 插件，没有指名是哪一个。</p>
+
+  <p>配置那一步有个坑。改配置的机制是「按 id 定位某条，替换它的整个 config」，但包名改不了：<code>vendor/include/src/index.ts</code> 第 116 行把 <code>name</code> 当成校验字段用，patch 里写的名字跟目标条目对不上，整条 patch 跳过并打一条警告。替换因此分成两步：<code>agent-loop</code> 那条标上 <code>disabled: true</code>，新条目用 <code>insert</code> 加进去。</p>
+
+  <p>这两步产品自己就在用。基础层插了一条 id 为 <code>hmr</code> 的条目（改完代码自动重新加载），浏览器版和一次性任务版都不要它，于是 <code>packages/bundle/web-app/cordis.patch.yml</code> 第 22 到 23 行、<code>packages/bundle/headless/cordis.patch.yml</code> 第 14 到 15 行各写了一遍同样的两行：</p>
+
+<pre><code>- id: hmr
+  disabled: true</code></pre>
+
+  <h3>13 个包挂在同一个钩子上</h3>
+
+  <p>循环转的时候会往外发事件，插件靠接住这些事件把自己插进流程。<code>docs/subsystems/core.zh.md</code> 里那份自动生成的清单列了 12 个 <code>agent/*</code> 事件：8 个是单纯的通知，另外 4 个是插件能真正插手的位置，其中 3 个允许监听器改写要送出去的内容，或者直接拦下不放行。</p>
+
+  <p>这里面 <code>agent/pre-step</code> 最要紧，架构文档第 92 行给它的说法是「决定模型看到什么」。<code>docs/event-producer-consumer.zh.md</code> 第 20 行把它的生产方和消费方都列了出来：生产方只有 <code>agent-loop</code> 一个，消费方 13 个包——上下文压缩、计划模式、技能加载、时间上下文、重复调用提醒、Claude Code 和 Codex 两个钩子桥接，等等。新写的循环若不发这个事件，这 13 个包的监听器一次也不会被调用，而且不会有任何报错。</p>
+
+  <p>仓库把这条写成了硬约束。根目录 <code>AGENTS.md</code> 第 108 行要求：新行为放到有文档记录的扩展点上，改动 <code>agent-loop</code> 就必须同步更新 <code>docs/architecture.md</code>。</p>
+
+  <h3>有人提过改主循环</h3>
+
+  <p>有一份需求是让 agent 盯住一个目标反复推进：一轮结束自动开下一轮，直到目标达成或者用完次数上限。考虑过的做法之一是在主循环里直接加一段目标循环。<code>.agents/notes/</code> 下两份记录写了同一个否决理由，<code>2026-07-19-same-session-goal-round-driver.zh.md</code> 第 78 行是这么记的：「在 <code>dsh-agent-loop</code> 内添加目标循环——不予采纳，因为公共队列、提示词、会话、取消和状态约定已经足够，具体循环分支还会赋予某种策略特权。」另一份 <code>2026-07-19-persisted-same-session-goal-domain.zh.md</code> 第 47 行给的理由一样：不能「赋予默认循环实现特权」。</p>
+
+  <p>最后落地的是 <code>packages/goal/goal-round-driver/</code> 这个独立包。同一份记录第 15 行写明它建在 <code>ctx.goals</code>、公共 <code>Agent</code> 接口和持久会话事件之上，并且不导入具体的 agent-loop 实现。第 17 行给了它的层次：目标 → Goal Round → 轮次 → 步骤。这等于在主循环外面又套了一圈循环。代价记在同一份记录第 87 行：主循环为此「只新增一个通用的『取消前观察』通知」，没有为目标开分支。这个新包也在那份 78 条清单里，第 259 行。</p>
+</article>

@@ -1,0 +1,117 @@
+<article class="chapter">
+  <div class="rail"><span class="no">15</span><span class="t">subagent</span></div>
+  <h2>把一段活分包出去</h2>
+
+  <p>一次对话里读进去的东西不会自动消失。模型一次能接收多少字有上限，读过的每个文件、每条命令的输出都占着这个额度，而且工具结果会一直留在这次对话的历史里，直到上下文被压缩。一个需要翻十几个文件才能回答的问题，十几个文件的正文会全部堆进这次对话，最后有用的可能只有一行结论。</p>
+
+  <p>另开一个对话去干这段活，能把这十几份正文挡在外面。新开的对话有自己的会话、自己的历史、自己的额度，干完只把最后的答案交回来，翻过的东西留在它那边。被派出去的这个对话叫 <strong>subagent</strong>，模型通过一个同名的 <code>subagent</code> 工具启动它。</p>
+
+  <p>工具给模型的说明写在 <code>packages/subagent/tool-subagent/src/index.ts</code> 第 227–231 行：</p>
+
+  <blockquote><p>Delegate a self-contained task to a subagent (a separate agent that works in its own context) to offload focused, independent work — research, a scoped implementation, an analysis — so it does not consume this conversation's context. The subagent returns its result, not its intermediate steps. Give it a complete, standalone prompt: it does not see this conversation.</p></blockquote>
+
+  <p>末句「it does not see this conversation」是硬约束。派活的那段文字要自己把话说全，因为对面读不到这边说过什么。</p>
+
+  <h3>另开的那个对话看得见什么</h3>
+
+  <p>启动方式有两种，仓库里叫 spawn 和 fork，各自是一个独立的包。spawn 起一个全新的子对话：它有自己的会话，看不到父对话的任何历史，只继承父对话的工作目录和模型（<code>packages/subagent/subagent-spawn-in-process/README.zh.md</code> 第 5、9 行）。fork 起的子对话则带着父对话已经完成的轮次开场。</p>
+
+  <p>fork 的边界卡得很死。启动子对话的那一刻，父对话自己这一轮还没结束——日志里已经有模型发出的工具调用，还没有对应的工具结果。照抄这份日志会给子对话一份不平衡的会话，所以 fork 只截取到最后一个「本轮结束」标记为止的连续前缀，进行中的那一轮不给（<code>packages/subagent/subagent-fork-in-process/README.zh.md</code> 第 9–11 行）。父对话此后又说了什么，子对话也看不到——fork 给的是启动那一刻的快照，之后两边没有任何实时共享。</p>
+
+  <p>fork 的工具说明因此换了一套措辞（<code>packages/subagent/tool-subagent/src/index.ts</code> 第 215–219 行）：「a child agent seeded with all completed turns so far (it does not see the current in-flight turn)」。用它的场合是后续分析、复查、接着往下做这类依赖前文的活。</p>
+
+  <p>两种起法都只传对话内容。子对话拿到的是一个全新的扁平注册作用域，不继承父对话的工具限制，也不继承权限。</p>
+
+  <h3>回来的只有最后一条消息</h3>
+
+  <p>子对话干活期间读了什么文件、跑了什么命令、试错了几次，父对话一概收不到。交回来的内容是子对话最后一条非空的模型消息；如果一条非空的都没有，就取它累积的模型文本；两样都没有，交回来的是空（<code>packages/subagent/subagent/README.zh.md</code> 第 67 行）。</p>
+
+  <p>结束原因有五种，写在 <code>docs/subsystems/subagent.zh.md</code> 第 347–358 行：completed、aborted、error、max-tokens、refusal。只有 completed 算成功，其余四种在父对话那边都变成一条出错的工具结果。对应的话术在 <code>packages/subagent/tool-subagent/src/index.ts</code> 第 124–138 行：</p>
+
+  <div class="trace">
+    <div class="t"><span class="tag">completed</span><p>正常干完，父对话读到子对话最后一条非空模型消息。</p></div>
+    <div class="t"><span class="tag">aborted</span><p>被取消，父对话读到 <code>subagent run was cancelled</code>。</p></div>
+    <div class="t"><span class="tag">error</span><p>模型或传输出错，父对话读到 <code>subagent run failed</code>。</p></div>
+    <div class="t"><span class="tag">max-tokens</span><p>没写完就撞上了字数上限，父对话读到 <code>subagent run hit its token limit before finishing</code>。</p></div>
+    <div class="t"><span class="tag">refusal</span><p>子对话拒绝了这件活，父对话读到 <code>subagent declined the task</code>。</p></div>
+  </div>
+
+  <p>这四种情况下子对话已经写出来的半截答案不会被扔掉。同一文件第 149–155 行的函数把它接在错误消息后面，中间隔一行 <code>Partial output before the run ended:</code>。父对话读到的仍是一条出错的结果，但半截答案跟着一起到。</p>
+
+  <h3>默认不等</h3>
+
+  <p>随发行版交付的四套 Agent 预设都放在 <code>apps/cli/config/agent-presets/</code> 下，其中三套把 <code>subagent</code> 工具配成了 <code>backgroundMode: continuable</code>：<code>standard/agent.cordis.yml</code> 第 186–191 行、<code>code/agent.cordis.yml</code> 第 187–192 行、<code>cordis/agent.cordis.yml</code> 第 174–179 行。第四套 <code>minimal/agent.cordis.yml</code> 只有 62 行，全篇没有一处提到 subagent，用这套预设的 agent 根本看不到这个工具。</p>
+
+  <p><code>continuable</code> 的意思是模型调用这个工具时默认不等结果。调用当场返回一个 id，渲染成 <code>started subagent &lt;id&gt;</code>，父对话接着干自己的事，子对话从此拥有自己的轮次，还能接着往下聊——这类子对话叫<strong>可继续</strong>的。</p>
+
+  <p>只有当下一步动作确实要用这个结果时，模型才显式写 <code>run_in_background: false</code>。这时走的是另一条路：调用一直等到子对话结束、结果收完、资源释放完才返回，这个子对话干完这一件事就没了，只有一个结果，不能再接消息，也没有恢复操作。这类叫<strong>一次性</strong>的（<code>packages/subagent/tool-subagent/src/index.ts</code> 第 388–429 行、<code>packages/subagent/subagent/README.zh.md</code> 第 47 行）。</p>
+
+  <p>后台跑的子对话结束时，运行时会往父对话里投一条通知，开头那句取决于它怎么结束的（<code>packages/subagent/subagent/src/continuation.ts</code> 第 291–311 行）：</p>
+
+<pre><code>Background subagent &lt;id&gt; finished and will do no further work unless you send it more.
+Background subagent &lt;id&gt; was stopped before it finished.
+Background subagent &lt;id&gt; ran out of room before it finished.
+Background subagent &lt;id&gt; declined the task.
+Background subagent &lt;id&gt; failed before it finished.</code></pre>
+
+  <p>这句后面跟着 <code>Its closing message:</code> 和子对话的最终内容；如果它什么都没留下，跟的是 <code>It left no closing message.</code>（同一文件第 1409–1411 行）。这条通知是无条件投的，跟子对话有没有主动汇报无关。撞上字数上限、模型出错、被取消、被拆掉的时候，子对话没有机会开口说自己怎么了，所以这条通知的投递不能依赖它。</p>
+
+  <h3>派出去之后还能说话</h3>
+
+  <p><code>send_message</code> 按 id 给一个后台子对话再发一条消息，接着同一段对话往下走。它的限制写在工具描述里（<code>packages/subagent/tool-subagent-control/src/index.ts</code> 第 29–33 行）：这条消息会成为子对话的下一轮，如果它还在干活，消息要等当前这一轮结束才轮到，所以改不了已经在进行的工作。这次调用不返回子对话的回答，只确认消息送到了；调用失败就意味着消息没送到。</p>
+
+  <p><code>interrupt_agent</code> 按 id 请求停掉一个后台对话当前这一轮（同一文件第 82–87 行）。停的只有当前这一轮。已经排队的消息保持暂停，直到下一次 <code>send_message</code>；它自己启动的更下层对话继续跑；它本身还能接后续消息。调用在停止请求被接受的一刻就返回，目标可能还会再跑一小会儿；去中断一个已经结束的对话，是一次被接受的空操作。</p>
+
+  <p>能中断谁由服务判定，工具本身不带任何权限。目标可以是直接下级，也可以是更深一层的后代，判据是调用者在不在目标记录下来的祖先链上。</p>
+
+  <p>还有一个 <code>list_agents</code>，按 id 和标题列出自己派出去的可继续子对话，每行带一个状态：<code>running</code> 表示此刻正在干活，<code>idle</code> 表示已装载但处在两轮之间（可能正等着它自己派出去的对话），<code>ready</code> 表示只存在于存储里、可以被唤回来（<code>packages/subagent/tool-subagent-control/src/list-agents.ts</code> 第 95–99 行）。这个工具的描述里专门写了它不该被用来反复查谁干完了，因为子对话结束时父对话本来就会收到结算通知。</p>
+
+  <h3>子对话主动汇报</h3>
+
+  <p>后台子对话的详细过程留在它自己的会话里，父对话不会自动拿到。所以子对话作用域里另装了一个 <code>report</code> 工具，只有可继续的进程内子对话有，顶层对话和一次性子对话都没有。它写进子对话提示词的那段话（<code>packages/subagent/tool-subagent-report/src/index.ts</code> 第 57–61 行）把理由说得很直白：</p>
+
+  <blockquote><p>The agent that started you shares your workspace but does not automatically receive your transcript, tool output, or reasoning, so a closing remark such as "done" leaves it nothing it can use.</p></blockquote>
+
+  <p>这个工具只有一个必填参数 <code>output</code>，不接收收件人参数——收件人由服务从子对话持久化下来的父级 id 推导，只可能是那一个。调用它不会结束子对话当前这一轮，也不会结束它的活。默认的投递方式会唤醒停驻的父对话，让这条汇报成为父对话新一轮里的普通消息。</p>
+
+  <h3>最多分包三层</h3>
+
+  <p>子对话自己也能再分包。为防止无限往下套，每次启动都会算一遍深度：顶层是 0，子对话是父对话的深度加一，算出来的值超过上限就拒绝启动（<code>packages/subagent/subagent/src/child-agent.ts</code> 第 48–57 行）。上限默认是 3（<code>packages/subagent/tool-subagent/src/index.ts</code> 第 98 行），配成 0 就等于完全禁止分包。</p>
+
+  <div class="data">
+    <div class="lbl">默认上限 3 时，一条委派链能有多长</div>
+    <div class="rows">
+      <div class="row"><span class="k">顶层对话</span><span class="v">深度 0</span></div>
+      <div class="row"><span class="k">它派出的子对话</span><span class="v">深度 1</span></div>
+      <div class="row"><span class="k">再往下一层</span><span class="v">深度 2</span></div>
+      <div class="row"><span class="k">再往下一层</span><span class="v">深度 3</span></div>
+      <div class="row"><span class="k">第五层</span><span class="v">深度 4，超过上限，启动被拒</span></div>
+    </div>
+  </div>
+
+  <p>这个深度写进了子对话持久化的会话头，而且是单调的：从存储里恢复一个子对话时，运行时选项可以把深度往大了改，永远不能往小了改。否则一个恢复出来的深层子对话会被重新当成顶层，接着往下再套三层。</p>
+
+  <h3>权限在分包那一刻就钉死</h3>
+
+  <p>启动子对话时，运行时会给它的权限拍一张快照：父会话显式设过的沙箱覆盖项照抄一份，部署里只要装了审批能力，子对话的审批策略就被钉成 <code>'never'</code>，无论父对话自己用的是什么策略（<code>packages/subagent/subagent/src/child-agent.ts</code> 第 199–204 行）。子对话因此只能在继承来的沙箱范围里动手，任何需要人点头的操作都会被确定性拒绝，而不是挂在那里等一个没人看的提示框。</p>
+
+  <p>每个进程内子对话还会在自己的提示词里收到一条声明（同一文件第 135–139 行）：</p>
+
+  <blockquote><p>You are a delegated subagent: your permission scope was fixed when you were started and cannot be widened from inside this session — operations that require approval are rejected automatically. When the task needs access beyond that scope, do not retry the denied operation; state the limitation in your reply so the delegating agent can handle it.</p></blockquote>
+
+  <p>最后半句管的是失败怎么收场。权限不够时子对话不重试被拒的那个操作，而是把这条限制写进自己的回复交回去，由派活的那个对话决定下一步。</p>
+
+  <h3>屏幕上能看到什么</h3>
+
+  <p>Web 界面里，父会话的页头有一个可展开的目录树，列出它派出去的子对话。每一行显示这个子对话是一次性还是可继续、当前是 <code>running</code> 还是 <code>inactive</code>、一个可选的标题，行尾那一列分上下两行，上行是持久化的 token 用量合计，下行是活跃轮次的累计耗时。耗时在子对话跑着的时候每秒加一次，变成 inactive 之后冻住（<code>packages/client/ui-subagent/README.zh.md</code> 第 7 行）。</p>
+
+  <p>普通侧边栏不列这些子会话，页头这棵树是进入它们的唯一入口（同一文件第 11 行）。点进一个一次性子对话，看到的是只读的完整记录。点进一个还活着、父对话也还在线的可继续子对话，输入框是可用的：在那里发消息走的就是 <code>send_message</code> 那条路，旁边的 Stop 走的是 <code>interrupt_agent</code> 那条路。</p>
+
+  <h3>什么时候值得分包</h3>
+
+  <p>可继续模式开着的时候，运行时会往父对话的系统提示词里插一段策略（<code>packages/subagent/tool-subagent/src/index.ts</code> 第 455–465 行）：默认用后台方式调用；相互独立的委派在同一条消息里一起启动，它们跑着的时候自己接着干别的；只有下一步动作依赖某个子对话的结果，才把那一次设成前台等待。</p>
+
+  <p>省下来的是父对话的额度，付出去的是另一份额度。spawn 起的子对话不复制父对话历史，但要为一份全新的独立上下文从头付 token；fork 起的子对话会把继承来的已完成历史整份复制进自己的请求，之后再独立累积。父对话这边也有账：一次性委派的最终结果留在历史里直到压缩，可继续子对话的结算通知同样留着，一个既主动汇报又正常结算的子对话，父对话要为汇报内容和结算通知各付一份。</p>
+
+  <p>还有几件它做不到的事。后台子对话的详细输出永远不通过委派工具返回，要看只能按 id 去翻它自己的会话记录。<code>send_message</code> 改不了正在进行的那一轮，只能排到下一轮。子对话的驻留只在单个进程内有效，两个 DeepSeek Harness 进程之间不协调所有权（<code>packages/subagent/subagent/README.zh.md</code> 第 151 行）。发出去但还没写进日志的消息不会重放——崩溃可能丢掉一条已经被接受的初始提示词或后续消息，之后一条新消息能把这个子对话唤回来，丢掉的那条不会自动补上（同一文件第 152 行）。</p>
+</article>

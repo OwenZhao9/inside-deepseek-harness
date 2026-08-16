@@ -1,0 +1,9 @@
+{
+  "no": "15",
+  "verdict": "仍需修",
+  "unfixed": [],
+  "newProblems": [
+    "「一次性」在稿子里前后指两件事。「默认不等」一节把它定义成 run_in_background: false 那条前台路（「这时走的是另一条路：调用一直等到子对话结束……这类叫一次性的」），但末节修订者为 factErrors 11 新写的句子说「一次性后台委派的最终输出走的是通用 Task 接口」。两句在仓库里各自属实（tool-subagent/src/index.ts:400–422 就是一次性的后台 jobs 路径；subagent/README.zh.md:47 说的是一次性 SubagentRun 表示一次前台委派），但正文从没引入过 jobs 那条路，读者读到「一次性后台」无法与前面的定义调和。连带把紧邻的「后台跑的子对话结束时，运行时会往父对话里投一条通知」也撑得过宽——settlementSummary / notifySettlement 全仓只在 continuation.ts 里，只有可继续子对话会收到这条通知，一次性后台走的是 jobs／Task。",
+    "新补的出处盖不住它所在的那句。「父对话这边也有账：一次性委派的最终结果留在历史里直到压缩，可继续子对话的结算通知同样留着；一个既主动汇报又正常结算的子对话……各付一份（subagent/README.zh.md 第 119 行）」——第 119 行只讲「每个已结算的 Activation 一条通知」和「既上报又结算要各付一份」，一个字都没提一次性结果或压缩。前半句的真正出处是 tool-subagent/README.zh.md:70：「一次性最终输出只在收集或注入时进入父级历史」。"
+  ]
+}
